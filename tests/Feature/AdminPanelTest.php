@@ -212,4 +212,75 @@ class AdminPanelTest extends TestCase
         $response->assertOk();
         $response->assertSee('Bitácora de Auditoría');
     }
+
+    public function test_completing_reservacion_automatically_creates_active_cliente(): void
+    {
+        $admin = User::factory()->create(['rol' => 'administrador']);
+        $plan = Plan::factory()->create(['nombre' => 'Plan Fibra 100M']);
+        $reservacion = Reservacion::factory()->create([
+            'nombre_solicitante' => 'Carlos Prospecto Nuevo',
+            'telefono' => '5551239999',
+            'direccion' => 'Calle Las Rosas #45, Col. Centro',
+            'correo_electronico' => 'carlos@prospecto.com',
+            'plan_id' => $plan->id,
+            'estado' => 'programada',
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('admin.reservaciones.update', $reservacion), [
+            'estado' => 'completada',
+            'fecha_solicitada' => now()->toDateString(),
+            'plan_id' => $plan->id,
+            'observaciones' => 'Instalación de fibra óptica finalizada y validada con módem activo.',
+        ]);
+
+        $response->assertRedirect(route('admin.reservaciones.show', $reservacion));
+        $response->assertSessionHas('success');
+
+        $reservacion->refresh();
+        $this->assertEquals('completada', $reservacion->estado);
+        $this->assertNotNull($reservacion->cliente_id);
+
+        $cliente = Cliente::find($reservacion->cliente_id);
+        $this->assertNotNull($cliente);
+        $this->assertEquals('Carlos Prospecto Nuevo', $cliente->nombre_completo);
+        $this->assertEquals('5551239999', $cliente->telefono);
+        $this->assertEquals('activo', $cliente->estado);
+        $this->assertEquals($plan->id, $cliente->plan_id);
+
+        // Verificar que se muestre en el listado de Clientes Activos
+        $clientesResponse = $this->actingAs($admin)->get(route('admin.clientes.index'));
+        $clientesResponse->assertOk();
+        $clientesResponse->assertSee('Carlos Prospecto Nuevo');
+        $clientesResponse->assertSee('Clientes Activos');
+    }
+
+    public function test_completing_reservacion_activates_existing_inactive_cliente(): void
+    {
+        $admin = User::factory()->create(['rol' => 'administrador']);
+        $plan = Plan::factory()->create();
+        $clienteInactivo = Cliente::factory()->create([
+            'nombre_completo' => 'Cliente Reactivado',
+            'telefono' => '7771112233',
+            'estado' => 'inactivo',
+        ]);
+
+        $reservacion = Reservacion::factory()->create([
+            'nombre_solicitante' => 'Cliente Reactivado',
+            'telefono' => '7771112233',
+            'plan_id' => $plan->id,
+            'estado' => 'pendiente',
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.reservaciones.update', $reservacion), [
+            'estado' => 'completada',
+            'plan_id' => $plan->id,
+        ]);
+
+        $reservacion->refresh();
+        $clienteInactivo->refresh();
+
+        $this->assertEquals($clienteInactivo->id, $reservacion->cliente_id);
+        $this->assertEquals('activo', $clienteInactivo->estado);
+        $this->assertEquals($plan->id, $clienteInactivo->plan_id);
+    }
 }

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $direccion
  * @property string|null $correo_electronico
  * @property string $tipo_servicio
+ * @property int|null $cliente_id
  * @property int|null $plan_id
  * @property Carbon|null $fecha_solicitada
  * @property string|null $observaciones
@@ -44,6 +45,7 @@ class Reservacion extends Model
      */
     protected $fillable = [
         'folio',
+        'cliente_id',
         'nombre_solicitante',
         'telefono',
         'direccion',
@@ -75,5 +77,15 @@ class Reservacion extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class, 'plan_id');
+    }
+
+    /**
+     * Cliente generado o vinculado a la reservación.
+     *
+     * @return BelongsTo<Cliente, $this>
+     */
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 }

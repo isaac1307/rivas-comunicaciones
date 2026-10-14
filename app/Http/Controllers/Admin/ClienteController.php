@@ -8,22 +8,44 @@ use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Models\Cliente;
 use App\Models\Plan;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class ClienteController extends Controller
 {
     /**
-     * Muestra la lista paginada de clientes con su plan asignado.
+     * Muestra la lista paginada de clientes con filtros por estado (activos por defecto) y búsqueda.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $clientes = Cliente::with('plan')
-            ->withCount('tickets')
-            ->orderBy('id', 'desc')
-            ->paginate(10);
+        $estado = (string) $request->input('estado', 'activo');
+        $buscar = trim((string) $request->input('buscar', ''));
 
-        return view('admin.clientes.index', compact('clientes'));
+        $query = Cliente::with('plan')
+            ->withCount('tickets');
+
+        if ($estado !== 'todos') {
+            $query->where('estado', $estado);
+        }
+
+        if ($buscar !== '') {
+            $query->where(function (Builder $q) use ($buscar) {
+                $q->where('nombre_completo', 'like', "%{$buscar}%")
+                    ->orWhere('telefono', 'like', "%{$buscar}%")
+                    ->orWhere('direccion', 'like', "%{$buscar}%");
+            });
+        }
+
+        $clientes = $query->orderBy('id', 'desc')->paginate(10)->withQueryString();
+
+        $totales = [
+            'total' => Cliente::count(),
+            'activos' => Cliente::where('estado', 'activo')->count(),
+            'inactivos' => Cliente::where('estado', 'inactivo')->count(),
+        ];
+
+        return view('admin.clientes.index', compact('clientes', 'estado', 'buscar', 'totales'));
     }
 
     /**
@@ -48,11 +70,13 @@ class ClienteController extends Controller
     }
 
     /**
-     * Muestra el expediente del cliente y sus tickets de soporte.
+     * Muestra el expediente del cliente, sus tickets de soporte y reservaciones de instalación.
      */
     public function show(Cliente $cliente): View
     {
         $cliente->load(['plan', 'tickets' => function ($query) {
+            $query->latest();
+        }, 'reservaciones' => function ($query) {
             $query->latest();
         }]);
 

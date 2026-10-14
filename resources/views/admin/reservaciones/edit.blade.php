@@ -24,6 +24,10 @@
                     <option value="completada" {{ old('estado', $reservacion->estado) === 'completada' ? 'selected' : '' }}>Completada (Instalado con Éxito)</option>
                     <option value="cancelada" {{ old('estado', $reservacion->estado) === 'cancelada' ? 'selected' : '' }}>Cancelada (Sin cobertura / Rechazado)</option>
                 </select>
+                <div class="form-text text-muted small mt-1">
+                    <i class="bi bi-info-circle text-primary me-1"></i>
+                    Al marcar como <strong>Completada (Instalado con Éxito)</strong>, el solicitante se registrará o activará automáticamente en <strong>Clientes Activos</strong>.
+                </div>
                 @error('estado')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror

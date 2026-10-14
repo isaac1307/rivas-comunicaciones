@@ -15,7 +15,21 @@
             <i class="bi bi-pencil me-1"></i> Actualizar Estado
         </a>
     </div>
-</div>
+
+@if ($reservacion->estado === 'completada' && $reservacion->cliente)
+    <div class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-sm border-0" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill fs-2 me-3 text-success"></i>
+            <div>
+                <div class="fw-bold fs-6">¡Instalación Completada con Éxito!</div>
+                <div class="small text-muted">Este cliente ya está registrado y activo en el padrón de <strong>Clientes Activos</strong>.</div>
+            </div>
+        </div>
+        <a href="{{ route('admin.clientes.show', $reservacion->cliente) }}" class="btn btn-sm btn-success fw-bold text-nowrap">
+            <i class="bi bi-person-badge me-1"></i> Ver en Clientes Activos
+        </a>
+    </div>
+@endif
 
 <div class="row g-4 mb-4">
     <div class="col-md-4">
@@ -78,6 +92,18 @@
         <div class="col-md-6">
             <span class="small text-muted d-block">Plan de Internet:</span>
             <div class="fw-bold text-primary fs-5">{{ $reservacion->plan ? $reservacion->plan->nombre : 'Sin plan definido' }}</div>
+        </div>
+        <div class="col-md-6">
+            <span class="small text-muted d-block">Cliente en Sistema:</span>
+            @if ($reservacion->cliente)
+                <div class="mt-1">
+                    <a href="{{ route('admin.clientes.show', $reservacion->cliente) }}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-person-check-fill me-1"></i> {{ $reservacion->cliente->nombre_completo }} (#{{ $reservacion->cliente->id }})
+                    </a>
+                </div>
+            @else
+                <div class="text-muted small mt-1">Sin cliente vinculado (se vincula al marcar como Completada)</div>
+            @endif
         </div>
         @if ($reservacion->observaciones)
             <div class="col-12">

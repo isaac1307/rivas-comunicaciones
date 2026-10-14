@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Reservaciones\CompletarReservacion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateReservacionRequest;
 use App\Models\Plan;
@@ -17,7 +18,7 @@ class ReservacionController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Reservacion::with('plan');
+        $query = Reservacion::with(['plan', 'cliente']);
 
         if ($request->filled('estado')) {
             $query->where('estado', $request->input('estado'));
@@ -33,7 +34,7 @@ class ReservacionController extends Controller
      */
     public function show(Reservacion $reservacione): View
     {
-        $reservacion = $reservacione->load('plan');
+        $reservacion = $reservacione->load(['plan', 'cliente']);
 
         return view('admin.reservaciones.show', compact('reservacion'));
     }
@@ -43,20 +44,27 @@ class ReservacionController extends Controller
      */
     public function edit(Reservacion $reservacione): View
     {
-        $reservacion = $reservacione->load('plan');
+        $reservacion = $reservacione->load(['plan', 'cliente']);
         $planes = Plan::all();
 
         return view('admin.reservaciones.edit', compact('reservacion', 'planes'));
     }
 
     /**
-     * Actualiza el estado y observaciones de la reservación usando FormRequest.
+     * Actualiza el estado y observaciones de la reservación.
+     * Si el estado es completada, da de alta o activa al cliente automáticamente en Clientes Activos.
      */
-    public function update(UpdateReservacionRequest $request, Reservacion $reservacione): RedirectResponse
+    public function update(UpdateReservacionRequest $request, Reservacion $reservacione, CompletarReservacion $completarReservacion): RedirectResponse
     {
-        $reservacione->update($request->validated());
+        $cliente = $completarReservacion->handle($reservacione, $request->validated());
+
+        $mensaje = 'Reservación actualizada con éxito.';
+
+        if ($cliente) {
+            $mensaje = "¡Instalación completada con éxito! El cliente '{$cliente->nombre_completo}' ahora se muestra en Clientes Activos.";
+        }
 
         return redirect()->route('admin.reservaciones.show', $reservacione)
-            ->with('success', 'Reservación actualizada con éxito.');
+            ->with('success', $mensaje);
     }
 }

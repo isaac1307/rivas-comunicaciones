@@ -37,7 +37,16 @@
                     @forelse ($reservaciones as $res)
                         <tr>
                             <td class="fw-bold text-primary">{{ $res->folio }}</td>
-                            <td>{{ $res->nombre_solicitante }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ $res->nombre_solicitante }}</div>
+                                @if ($res->cliente)
+                                    <div>
+                                        <a href="{{ route('admin.clientes.show', $res->cliente) }}" class="badge bg-success-subtle text-success text-decoration-none" title="Ver en Clientes Activos">
+                                            <i class="bi bi-person-check-fill me-1"></i> Cliente Activo #{{ $res->cliente_id }}
+                                        </a>
+                                    </div>
+                                @endif
+                            </td>
                             <td>{{ $res->telefono }}</td>
                             <td><span class="badge bg-light text-dark border">{{ str_replace('_', ' ', $res->tipo_servicio) }}</span></td>
                             <td>

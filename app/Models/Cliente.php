@@ -106,6 +106,16 @@ class Cliente extends Model
     }
 
     /**
+     * Reservaciones de instalación asociadas al cliente.
+     *
+     * @return HasMany<Reservacion, $this>
+     */
+    public function reservaciones(): HasMany
+    {
+        return $this->hasMany(Reservacion::class, 'cliente_id');
+    }
+
+    /**
      * Saldo pendiente calculado a partir de los agregados cargados con scopeConSaldo().
      */
     public function saldoPendiente(): float

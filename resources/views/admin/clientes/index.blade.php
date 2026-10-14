@@ -13,6 +13,38 @@
     </a>
 </div>
 
+<!-- Filtros y Búsqueda -->
+<div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ route('admin.clientes.index') }}" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="buscar" value="{{ $buscar }}" class="form-control border-start-0" placeholder="Buscar por nombre, teléfono o dirección...">
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="btn-group btn-group-sm w-100" role="group">
+                    <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'activo']) }}" class="btn {{ $estado === 'activo' ? 'btn-success' : 'btn-outline-secondary' }}">
+                        <i class="bi bi-person-check me-1"></i> Clientes Activos ({{ $totales['activos'] }})
+                    </a>
+                    <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'todos']) }}" class="btn {{ $estado === 'todos' ? 'btn-primary' : 'btn-outline-secondary' }}">
+                        Todos ({{ $totales['total'] }})
+                    </a>
+                    <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'inactivo']) }}" class="btn {{ $estado === 'inactivo' ? 'btn-danger' : 'btn-outline-secondary' }}">
+                        Inactivos ({{ $totales['inactivos'] }})
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-2 text-md-end">
+                @if ($buscar !== '' || $estado !== 'activo')
+                    <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary btn-sm w-100">Restablecer</a>
+                @endif
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm rounded-3 bg-white">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -33,7 +65,12 @@
                     @forelse ($clientes as $cli)
                         <tr>
                             <td class="text-muted">#{{ $cli->id }}</td>
-                            <td class="fw-bold text-dark">{{ $cli->nombre_completo }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ $cli->nombre_completo }}</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    <i class="bi bi-geo-alt me-1"></i>{{ Str::limit($cli->direccion, 40) }}
+                                </div>
+                            </td>
                             <td>{{ $cli->telefono }}</td>
                             <td>
                                 @if ($cli->plan)
@@ -50,6 +87,7 @@
                             </td>
                             <td>
                                 <span class="badge {{ $cli->estado === 'activo' ? 'bg-success' : 'bg-secondary' }}">
+                                    <i class="bi {{ $cli->estado === 'activo' ? 'bi-check-circle' : 'bi-dash-circle' }} me-1"></i>
                                     {{ ucfirst($cli->estado) }}
                                 </span>
                             </td>
@@ -73,7 +111,9 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No hay clientes dados de alta en el sistema.</td>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                No se encontraron clientes con los filtros aplicados.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -66,6 +66,53 @@
     @endif
 </div>
 
+@if ($cliente->reservaciones && $cliente->reservaciones->isNotEmpty())
+    <!-- Historial de Solicitud de Instalación Vinculada -->
+    <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+        <div class="card-header bg-transparent border-0 pt-3 px-3">
+            <h5 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-calendar-check text-success me-2"></i> Solicitud de Instalación de Origen ({{ $cliente->reservaciones->count() }})
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light text-uppercase text-muted">
+                        <tr>
+                            <th>Folio</th>
+                            <th>Servicio Solicitado</th>
+                            <th>Plan</th>
+                            <th>Fecha Programada</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($cliente->reservaciones as $res)
+                            <tr>
+                                <td class="fw-bold text-primary">{{ $res->folio }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ str_replace('_', ' ', $res->tipo_servicio) }}</span></td>
+                                <td>{{ $res->plan ? $res->plan->nombre : 'Sin plan' }}</td>
+                                <td>{{ $res->fecha_solicitada ? $res->fecha_solicitada->format('d/m/Y') : 'Sin fecha' }}</td>
+                                <td>
+                                    <span class="badge bg-success text-white">
+                                        <i class="bi bi-check-circle me-1"></i> {{ ucfirst($res->estado) }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ route('admin.reservaciones.show', $res) }}" class="btn btn-sm btn-outline-primary py-0">
+                                        Ver Reservación
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+@endif
+
 <!-- Historial de Tickets del Cliente -->
 <div class="card border-0 shadow-sm rounded-3 bg-white">
     <div class="card-header bg-transparent border-0 pt-3 px-3">
