@@ -161,7 +161,8 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // El registro público está deshabilitado: las cuentas las crea un administrador
+        // desde el módulo de Usuarios del panel (/admin/usuarios).
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

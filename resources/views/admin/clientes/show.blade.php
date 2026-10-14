@@ -12,6 +12,9 @@
         <span class="badge bg-light text-dark border">Cliente #{{ $cliente->id }}</span>
     </div>
     <div class="d-flex gap-2">
+        <a href="{{ route('admin.cobranza.show', $cliente) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-cash-stack me-1"></i> Cobranza / Pagos
+        </a>
         <a href="{{ route('admin.clientes.edit', $cliente) }}" class="btn btn-primary btn-sm">
             <i class="bi bi-pencil me-1"></i> Editar Cliente
         </a>

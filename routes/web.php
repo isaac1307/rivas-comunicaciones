@@ -2,13 +2,17 @@
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\BitacoraController as AdminBitacoraController;
+use App\Http\Controllers\Admin\CargoController as AdminCargoController;
 use App\Http\Controllers\Admin\ClienteController as AdminClienteController;
+use App\Http\Controllers\Admin\CobranzaController as AdminCobranzaController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\MensajeContactoController as AdminMensajeContactoController;
+use App\Http\Controllers\Admin\PagoController as AdminPagoController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\PromocionController as AdminPromocionController;
 use App\Http\Controllers\Admin\ReservacionController as AdminReservacionController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
+use App\Http\Controllers\Admin\UsuarioController as AdminUsuarioController;
 use App\Http\Controllers\ContactoController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PublicPlanController;
@@ -51,19 +55,39 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
     Route::middleware('auth')->group(function () {
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        // Operación comercial y soporte: Administradores y Operadores
+        Route::middleware('role:administrador,operador')->group(function () {
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-        Route::resource('planes', AdminPlanController::class);
-        Route::resource('promociones', AdminPromocionController::class);
-        Route::resource('clientes', AdminClienteController::class);
+            Route::resource('planes', AdminPlanController::class);
+            Route::resource('promociones', AdminPromocionController::class);
+            Route::resource('clientes', AdminClienteController::class);
 
-        Route::resource('reservaciones', AdminReservacionController::class)->only(['index', 'show', 'edit', 'update']);
-        Route::resource('tickets', AdminTicketController::class);
-        Route::resource('mensajes', AdminMensajeContactoController::class)->only(['index', 'show', 'update', 'destroy']);
+            Route::resource('reservaciones', AdminReservacionController::class)->only(['index', 'show', 'edit', 'update']);
+            Route::resource('tickets', AdminTicketController::class);
+            Route::resource('mensajes', AdminMensajeContactoController::class)->only(['index', 'show', 'update', 'destroy']);
+        });
 
-        Route::get('/bitacoras', [AdminBitacoraController::class, 'index'])
-            ->middleware('role:administrador')
-            ->name('bitacoras.index');
+        // Módulo de Cobranza: Administradores y Cobradores
+        Route::middleware('role:administrador,cobrador')->group(function () {
+            Route::get('/cobranza', [AdminCobranzaController::class, 'index'])->name('cobranza.index');
+            Route::get('/cobranza/clientes/{cliente}', [AdminCobranzaController::class, 'show'])->name('cobranza.show');
+            Route::post('/cobranza/clientes/{cliente}/pagos', [AdminPagoController::class, 'store'])->name('pagos.store');
+            Route::get('/cobranza/pagos/{pago}/recibo', [AdminPagoController::class, 'recibo'])->name('pagos.recibo');
+
+            Route::get('/cobranza/clientes/{cliente}/cargos/crear', [AdminCargoController::class, 'create'])->name('cargos.create');
+            Route::post('/cobranza/clientes/{cliente}/cargos', [AdminCargoController::class, 'store'])->name('cargos.store');
+            Route::post('/cobranza/cargos/generar-masivo', [AdminCargoController::class, 'generarMasivo'])->name('cargos.generar-masivo');
+        });
+
+        // Operaciones financieras críticas y administración del sistema: Exclusivo Administrador
+        Route::middleware('role:administrador')->group(function () {
+            Route::post('/cobranza/pagos/{pago}/anular', [AdminPagoController::class, 'anular'])->name('pagos.anular');
+            Route::post('/cobranza/cargos/{cargo}/cancelar', [AdminCargoController::class, 'cancelar'])->name('cargos.cancelar');
+
+            Route::resource('usuarios', AdminUsuarioController::class)->except(['show']);
+            Route::get('/bitacoras', [AdminBitacoraController::class, 'index'])->name('bitacoras.index');
+        });
     });
 });
 

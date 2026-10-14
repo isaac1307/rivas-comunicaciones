@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdatePlanRequest;
 use App\Models\Plan;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class PlanController extends Controller
 {
@@ -74,10 +75,14 @@ class PlanController extends Controller
     }
 
     /**
-     * Elimina el plan si no tiene clientes asignados.
+     * Elimina el plan si no tiene clientes asignados (solo administradores).
      */
-    public function destroy(Plan $plane): RedirectResponse
+    public function destroy(Request $request, Plan $plane): RedirectResponse
     {
+        if (! $request->user()?->isAdmin()) {
+            abort(403, 'Solo un administrador puede eliminar planes del sistema.');
+        }
+
         if ($plane->clientes()->exists()) {
             return back()->with('error', 'No se puede eliminar el plan porque tiene clientes asignados.');
         }

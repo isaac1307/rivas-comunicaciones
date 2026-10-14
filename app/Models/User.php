@@ -39,6 +39,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
+     * Roles disponibles en el sistema y su etiqueta visible.
+     *
+     * @var array<string, string>
+     */
+    public const ROLES = [
+        'administrador' => 'Administrador',
+        'operador' => 'Operador',
+        'cobrador' => 'Cobrador',
+    ];
+
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -145,6 +156,40 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function isOperador(): bool
     {
         return $this->rol === 'operador';
+    }
+
+    /**
+     * Check if user is a billing collector.
+     */
+    public function isCobrador(): bool
+    {
+        return $this->rol === 'cobrador';
+    }
+
+    /**
+     * Pagos registrados por el usuario.
+     *
+     * @return HasMany<Pago, $this>
+     */
+    public function pagosRegistrados(): HasMany
+    {
+        return $this->hasMany(Pago::class, 'usuario_id');
+    }
+
+    /**
+     * Nombre de la ruta de inicio del panel según el rol del usuario.
+     */
+    public function rutaPanel(): string
+    {
+        return $this->isCobrador() ? 'admin.cobranza.index' : 'admin.dashboard';
+    }
+
+    /**
+     * Etiqueta legible del rol.
+     */
+    public function rolEtiqueta(): string
+    {
+        return self::ROLES[$this->rol] ?? ucfirst($this->rol);
     }
 
     /**

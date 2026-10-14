@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Cobranza\GenerarCargosMensuales;
+use App\Actions\Cobranza\RegistrarPago;
+use App\Models\Cargo;
 use App\Models\Cliente;
 use App\Models\MensajeContacto;
 use App\Models\Plan;
@@ -40,6 +43,18 @@ class DatabaseSeeder extends Seeder
                 'email' => 'operador@rivascomunicaciones.com',
                 'password' => Hash::make('operador123'),
                 'rol' => 'operador',
+                'estado' => 'activo',
+            ]
+        );
+
+        $cobrador = User::firstOrCreate(
+            ['nombre_usuario' => 'cobrador'],
+            [
+                'nombre_completo' => 'Cobrador Andrés Morales',
+                'name' => 'Cobrador Andrés Morales',
+                'email' => 'cobranza@rivascomunicaciones.com',
+                'password' => Hash::make('cobrador123'),
+                'rol' => 'cobrador',
                 'estado' => 'activo',
             ]
         );
@@ -196,6 +211,44 @@ class DatabaseSeeder extends Seeder
                 'mensaje' => 'Buen día, requerimos cotizar un enlace de 500 Megas simétricos para nuestras oficinas con 40 computadoras.',
                 'leido' => false,
             ]);
+        }
+
+        // 8. Control de Cobranza (Cargos Mensuales y Pagos Demo)
+        if (Cargo::count() === 0) {
+            $generarCargos = app(GenerarCargosMensuales::class);
+            // Generar mes actual
+            $generarCargos->handle(now()->startOfMonth());
+
+            // Registrar un pago demo realizado por cliente 1 atendido por el cobrador
+            if ($cliente1->plan) {
+                $cargoCliente1 = $cliente1->cargos()->first();
+                if ($cargoCliente1) {
+                    $registrarPago = app(RegistrarPago::class);
+                    $registrarPago->handle($cliente1, [
+                        'monto' => (float) $cargoCliente1->monto,
+                        'metodo_pago' => 'efectivo',
+                        'referencia' => 'REC-CAJA-001',
+                        'fecha_pago' => now(),
+                        'notas' => 'Pago en ventanilla mensualidad al corriente.',
+                    ], $cobrador);
+                }
+            }
+
+            // Generar un cargo vencido del mes anterior para cliente 2 para mostrar moroso
+            if ($cliente2->plan) {
+                $mesAnterior = now()->subMonth();
+                Cargo::create([
+                    'cliente_id' => $cliente2->id,
+                    'plan_id' => $cliente2->plan_id,
+                    'tipo' => 'mensualidad',
+                    'periodo' => $mesAnterior->format('Y-m'),
+                    'concepto' => 'Mensualidad '.$mesAnterior->format('F Y').' - '.$cliente2->plan->nombre,
+                    'monto' => $cliente2->plan->precio_mensual,
+                    'monto_pagado' => 0,
+                    'fecha_vencimiento' => $mesAnterior->startOfMonth()->addDays(9)->toDateString(),
+                    'estado' => 'pendiente',
+                ]);
+            }
         }
     }
 }

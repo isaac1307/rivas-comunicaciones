@@ -94,63 +94,80 @@
     <!-- Sidebar de Navegación Admin -->
     <nav id="sidebar" class="d-flex flex-column py-3">
         <div class="px-4 mb-4">
-            <a href="{{ route('admin.dashboard') }}" class="text-white text-decoration-none d-flex align-items-center gap-2">
+            <a href="{{ route(auth()->check() ? auth()->user()->rutaPanel() : 'admin.login') }}" class="text-white text-decoration-none d-flex align-items-center gap-2">
                 <span class="badge bg-primary fs-5 p-2 rounded-3"><i class="bi bi-hdd-network"></i></span>
                 <div>
                     <div class="fw-bold fs-6 tracking-tight">Rivas Admin</div>
-                    <div class="text-secondary small">Panel de Control</div>
+                    <div class="text-secondary small">{{ auth()->check() ? auth()->user()->rolEtiqueta() : 'Panel' }}</div>
                 </div>
             </a>
         </div>
 
         <ul class="nav flex-column mb-auto">
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-            </li>
+            @if (auth()->check() && !auth()->user()->isCobrador())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
 
-            <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Operación Comercial</li>
-            
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.planes.*') ? 'active' : '' }}" href="{{ route('admin.planes.index') }}">
-                    <i class="bi bi-router"></i> Planes de Internet
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.promociones.*') ? 'active' : '' }}" href="{{ route('admin.promociones.index') }}">
-                    <i class="bi bi-tags"></i> Promociones
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.clientes.*') ? 'active' : '' }}" href="{{ route('admin.clientes.index') }}">
-                    <i class="bi bi-people"></i> Clientes
-                </a>
-            </li>
+                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Operación Comercial</li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.planes.*') ? 'active' : '' }}" href="{{ route('admin.planes.index') }}">
+                        <i class="bi bi-router"></i> Planes de Internet
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.promociones.*') ? 'active' : '' }}" href="{{ route('admin.promociones.index') }}">
+                        <i class="bi bi-tags"></i> Promociones
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.clientes.*') ? 'active' : '' }}" href="{{ route('admin.clientes.index') }}">
+                        <i class="bi bi-people"></i> Clientes
+                    </a>
+                </li>
 
-            <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Atención & Soporte</li>
+                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Atención & Soporte</li>
 
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.reservaciones.*') ? 'active' : '' }}" href="{{ route('admin.reservaciones.index') }}">
-                    <i class="bi bi-calendar-check"></i> Reservaciones
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}" href="{{ route('admin.tickets.index') }}">
-                    <i class="bi bi-ticket-detailed"></i> Tickets de Soporte
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('admin.mensajes.*') ? 'active' : '' }}" href="{{ route('admin.mensajes.index') }}">
-                    <i class="bi bi-envelope"></i> Mensajes Contacto
-                </a>
-            </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.reservaciones.*') ? 'active' : '' }}" href="{{ route('admin.reservaciones.index') }}">
+                        <i class="bi bi-calendar-check"></i> Reservaciones
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}" href="{{ route('admin.tickets.index') }}">
+                        <i class="bi bi-ticket-detailed"></i> Tickets de Soporte
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.mensajes.*') ? 'active' : '' }}" href="{{ route('admin.mensajes.index') }}">
+                        <i class="bi bi-envelope"></i> Mensajes Contacto
+                    </a>
+                </li>
+            @endif
+
+            @if (auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isCobrador()))
+                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Control de Cobranza</li>
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.cobranza.*') || request()->routeIs('admin.pagos.*') || request()->routeIs('admin.cargos.*') ? 'active' : '' }}" href="{{ route('admin.cobranza.index') }}">
+                        <i class="bi bi-cash-stack"></i> Cobranza por Cliente
+                    </a>
+                </li>
+            @endif
 
             @if (auth()->check() && auth()->user()->isAdmin())
-                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Seguridad & Auditoría</li>
+                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Seguridad & Administración</li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">
+                        <i class="bi bi-person-gear"></i> Usuarios del Sistema
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.bitacoras.*') ? 'active' : '' }}" href="{{ route('admin.bitacoras.index') }}">
-                        <i class="bi bi-journal-text"></i> Bitácora del Sistema
+                        <i class="bi bi-journal-text"></i> Bitácora de Auditoría
                     </a>
                 </li>
             @endif
@@ -181,8 +198,8 @@
                 @if (auth()->check())
                     <div class="text-end d-none d-sm-block">
                         <div class="fw-semibold small">{{ auth()->user()->nombre_completo ?: auth()->user()->nombre_usuario }}</div>
-                        <span class="badge {{ auth()->user()->isAdmin() ? 'bg-primary' : 'bg-secondary' }}" style="font-size: 0.7rem;">
-                            {{ ucfirst(auth()->user()->rol) }}
+                        <span class="badge {{ auth()->user()->isAdmin() ? 'bg-primary' : (auth()->user()->isCobrador() ? 'bg-success' : 'bg-info text-dark') }}" style="font-size: 0.7rem;">
+                            {{ auth()->user()->rolEtiqueta() }}
                         </span>
                     </div>
 

@@ -10,6 +10,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -17,26 +19,41 @@ class AuthController extends Controller
     /**
      * Muestra el formulario de inicio de sesión administrativo.
      */
-    public function showLoginForm(): View|RedirectResponse
+    public function showLoginForm(Request $request): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('admin.dashboard');
+            /** @var User $user */
+            $user = $request->user();
+
+            return redirect()->route($user->rutaPanel());
         }
 
         return view('admin.auth.login');
     }
 
     /**
-     * Procesa la solicitud de inicio de sesión administrativo.
+     * Procesa la solicitud de inicio de sesión administrativo con control de intentos fallidos.
      */
     public function login(AdminLoginRequest $request): RedirectResponse
     {
         $credenciales = $request->validated();
         $recordar = $request->boolean('remember');
 
+        $throttleKey = Str::transliterate(Str::lower($credenciales['nombre_usuario']).'|'.$request->ip());
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $segundos = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'nombre_usuario' => ["Demasiados intentos fallidos. Por favor intenta de nuevo en {$segundos} segundos."],
+            ]);
+        }
+
         $user = User::where('nombre_usuario', $credenciales['nombre_usuario'])->first();
 
         if (! $user || ! Hash::check($credenciales['password'], $user->password)) {
+            RateLimiter::hit($throttleKey, 60);
+
             throw ValidationException::withMessages([
                 'nombre_usuario' => ['Las credenciales proporcionadas no coinciden con nuestros registros.'],
             ]);
@@ -48,14 +65,16 @@ class AuthController extends Controller
             ]);
         }
 
+        RateLimiter::clear($throttleKey);
+
         Auth::login($user, $recordar);
         $request->session()->regenerate();
 
         // Actualizar último acceso
         $user->update(['ultimo_acceso' => now()]);
 
-        return redirect()->intended(route('admin.dashboard'))
-            ->with('success', 'Bienvenido al panel de administración, '.$user->nombre_completo);
+        return redirect()->intended(route($user->rutaPanel()))
+            ->with('success', 'Bienvenido al panel, '.$user->nombre_completo);
     }
 
     /**

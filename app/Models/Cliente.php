@@ -21,6 +21,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon $fecha_alta
  * @property string $estado
  * @property string|null $notas
+ * @property float|string|null $total_cargos
+ * @property float|string|null $total_pagado
+ * @property int|null $cargos_vencidos_count
  */
 class Cliente extends Model
 {
@@ -83,6 +86,42 @@ class Cliente extends Model
     }
 
     /**
+     * Cargos (adeudos) generados al cliente.
+     *
+     * @return HasMany<Cargo, $this>
+     */
+    public function cargos(): HasMany
+    {
+        return $this->hasMany(Cargo::class, 'cliente_id');
+    }
+
+    /**
+     * Pagos realizados por el cliente.
+     *
+     * @return HasMany<Pago, $this>
+     */
+    public function pagos(): HasMany
+    {
+        return $this->hasMany(Pago::class, 'cliente_id');
+    }
+
+    /**
+     * Saldo pendiente calculado a partir de los agregados cargados con scopeConSaldo().
+     */
+    public function saldoPendiente(): float
+    {
+        return round((float) $this->total_cargos - (float) $this->total_pagado, 2);
+    }
+
+    /**
+     * Indica si el cliente tiene historial de cobranza que impide eliminarlo.
+     */
+    public function tieneHistorialDeCobranza(): bool
+    {
+        return $this->cargos()->exists() || $this->pagos()->exists();
+    }
+
+    /**
      * Scope para clientes activos.
      *
      * @param  Builder<Cliente>  $query
@@ -91,5 +130,41 @@ class Cliente extends Model
     public function scopeActivo(Builder $query): Builder
     {
         return $query->where('estado', 'activo');
+    }
+
+    /**
+     * Agrega los totales de cobranza (cargado, pagado y cargos vencidos) en la misma consulta.
+     *
+     * @param  Builder<Cliente>  $query
+     * @return Builder<Cliente>
+     */
+    public function scopeConSaldo(Builder $query): Builder
+    {
+        return $query
+            ->withSum(['cargos as total_cargos' => fn (Builder $q) => $q->where('estado', '!=', 'cancelado')], 'monto')
+            ->withSum(['cargos as total_pagado' => fn (Builder $q) => $q->where('estado', '!=', 'cancelado')], 'monto_pagado')
+            ->withCount(['cargos as cargos_vencidos_count' => fn (Builder $q) => $q->whereIn('estado', Cargo::ESTADOS_PENDIENTES)->whereDate('fecha_vencimiento', '<', today())]);
+    }
+
+    /**
+     * Scope para clientes con al menos un cargo con saldo.
+     *
+     * @param  Builder<Cliente>  $query
+     * @return Builder<Cliente>
+     */
+    public function scopeConAdeudo(Builder $query): Builder
+    {
+        return $query->whereHas('cargos', fn (Builder $q) => $q->pendientes());
+    }
+
+    /**
+     * Scope para clientes morosos (con cargos vencidos sin pagar).
+     *
+     * @param  Builder<Cliente>  $query
+     * @return Builder<Cliente>
+     */
+    public function scopeMorosos(Builder $query): Builder
+    {
+        return $query->whereHas('cargos', fn (Builder $q) => $q->vencidos());
     }
 }

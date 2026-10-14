@@ -9,6 +9,7 @@ use App\Models\Cliente;
 use App\Models\Plan;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ClienteController extends Controller
 {
@@ -80,10 +81,18 @@ class ClienteController extends Controller
     }
 
     /**
-     * Elimina el cliente del sistema.
+     * Elimina el cliente del sistema (solo administradores y sin historial financiero).
      */
-    public function destroy(Cliente $cliente): RedirectResponse
+    public function destroy(Request $request, Cliente $cliente): RedirectResponse
     {
+        if (! $request->user()?->isAdmin()) {
+            abort(403, 'Solo un administrador puede eliminar clientes del sistema.');
+        }
+
+        if ($cliente->tieneHistorialDeCobranza()) {
+            return back()->with('error', 'No es posible eliminar al cliente porque cuenta con historial de cobranza (cargos o pagos). Si ya no cuenta con el servicio, cambia su estado a "Inactivo".');
+        }
+
         $cliente->delete();
 
         return redirect()->route('admin.clientes.index')

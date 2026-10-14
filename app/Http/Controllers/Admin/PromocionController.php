@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Promocion;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class PromocionController extends Controller
 {
@@ -86,10 +87,14 @@ class PromocionController extends Controller
     }
 
     /**
-     * Elimina la promoción y desvincula sus relaciones pivot.
+     * Elimina la promoción y desvincula sus relaciones pivot (solo administradores).
      */
-    public function destroy(Promocion $promocione): RedirectResponse
+    public function destroy(Request $request, Promocion $promocione): RedirectResponse
     {
+        if (! $request->user()?->isAdmin()) {
+            abort(403, 'Solo un administrador puede eliminar promociones del sistema.');
+        }
+
         $promocione->planes()->detach();
         $promocione->delete();
 
