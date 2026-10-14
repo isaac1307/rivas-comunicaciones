@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Bitacora;
 use App\Models\Cliente;
 use App\Models\Plan;
 use App\Models\Promocion;
@@ -282,5 +283,82 @@ class AdminPanelTest extends TestCase
         $this->assertEquals($clienteInactivo->id, $reservacion->cliente_id);
         $this->assertEquals('activo', $clienteInactivo->estado);
         $this->assertEquals($plan->id, $clienteInactivo->plan_id);
+    }
+
+    public function test_administrador_can_filter_and_export_bitacoras(): void
+    {
+        $admin = User::factory()->create(['rol' => 'administrador', 'nombre_usuario' => 'admin_audit']);
+        $operador = User::factory()->create(['rol' => 'operador', 'nombre_usuario' => 'operador_audit']);
+
+        Bitacora::create([
+            'usuario_id' => $admin->id,
+            'accion' => 'creacion',
+            'descripcion' => 'Alta en planes #10 (Plan Fibra 500)',
+            'tabla_afectada' => 'planes',
+            'registro_id' => 10,
+            'ip_origen' => '192.168.1.100',
+        ]);
+
+        Bitacora::create([
+            'usuario_id' => $operador->id,
+            'accion' => 'actualizacion',
+            'descripcion' => 'Actualización en tickets #5: modificó [estado]',
+            'tabla_afectada' => 'tickets',
+            'registro_id' => 5,
+            'ip_origen' => '192.168.1.101',
+        ]);
+
+        // Ver index con filtros
+        $response = $this->actingAs($admin)->get(route('admin.bitacoras.index', [
+            'accion' => 'creacion',
+            'tabla' => 'planes',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Plan Fibra 500');
+        $response->assertDontSee('tickets #5');
+
+        // Búsqueda libre
+        $searchResponse = $this->actingAs($admin)->get(route('admin.bitacoras.index', [
+            'buscar' => '192.168.1.101',
+        ]));
+        $searchResponse->assertOk();
+        $searchResponse->assertSee('tickets #5');
+
+        // Exportación CSV
+        $exportResponse = $this->actingAs($admin)->get(route('admin.bitacoras.export', [
+            'accion' => 'creacion',
+        ]));
+        $exportResponse->assertOk();
+        $exportResponse->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_login_and_logout_record_security_audit_events(): void
+    {
+        $user = User::factory()->create([
+            'nombre_usuario' => 'test_audit_login',
+            'password' => Hash::make('password123'),
+            'rol' => 'administrador',
+            'estado' => 'activo',
+        ]);
+
+        $this->post(route('admin.login.submit'), [
+            'nombre_usuario' => 'test_audit_login',
+            'password' => 'password123',
+        ]);
+
+        $this->assertDatabaseHas('bitacoras', [
+            'usuario_id' => $user->id,
+            'accion' => 'acceso',
+            'tabla_afectada' => 'usuarios',
+        ]);
+
+        $this->actingAs($user)->post(route('admin.logout'));
+
+        $this->assertDatabaseHas('bitacoras', [
+            'usuario_id' => $user->id,
+            'accion' => 'cierre_sesion',
+            'tabla_afectada' => 'usuarios',
+        ]);
     }
 }

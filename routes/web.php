@@ -86,6 +86,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/cobranza/cargos/{cargo}/cancelar', [AdminCargoController::class, 'cancelar'])->name('cargos.cancelar');
 
             Route::resource('usuarios', AdminUsuarioController::class)->except(['show']);
+            Route::get('/bitacoras/export', [AdminBitacoraController::class, 'export'])->name('bitacoras.export');
             Route::get('/bitacoras', [AdminBitacoraController::class, 'index'])->name('bitacoras.index');
         });
     });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminLoginRequest;
+use App\Models\Bitacora;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -73,6 +74,16 @@ class AuthController extends Controller
         // Actualizar último acceso
         $user->update(['ultimo_acceso' => now()]);
 
+        // Registrar evento de seguridad en bitácora
+        Bitacora::create([
+            'usuario_id' => $user->id,
+            'accion' => 'acceso',
+            'descripcion' => "Inicio de sesión administrativo exitoso ({$user->nombre_completo})",
+            'tabla_afectada' => 'usuarios',
+            'registro_id' => $user->id,
+            'ip_origen' => $request->ip(),
+        ]);
+
         return redirect()->intended(route($user->rutaPanel()))
             ->with('success', 'Bienvenido al panel, '.$user->nombre_completo);
     }
@@ -82,6 +93,19 @@ class AuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        if (Auth::check()) {
+            /** @var User $currentUser */
+            $currentUser = Auth::user();
+            Bitacora::create([
+                'usuario_id' => $currentUser->id,
+                'accion' => 'cierre_sesion',
+                'descripcion' => "Cierre de sesión administrativo ({$currentUser->nombre_completo})",
+                'tabla_afectada' => 'usuarios',
+                'registro_id' => $currentUser->id,
+                'ip_origen' => $request->ip(),
+            ]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
