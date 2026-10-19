@@ -30,7 +30,7 @@
             top: 0;
             left: 0;
             z-index: 1040;
-            transition: all 0.3s;
+            transition: transform 300ms var(--ease-drawer);
         }
         #sidebar .nav-link {
             color: #94a3b8;
@@ -41,7 +41,7 @@
             align-items: center;
             gap: 0.75rem;
             font-weight: 500;
-            transition: all 0.15s ease-in-out;
+            transition: color 150ms ease, background-color 150ms ease;
         }
         #sidebar .nav-link:hover {
             color: #ffffff;
@@ -70,23 +70,26 @@
             border: 1px solid #e2e8f0;
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-            transition: transform 0.15s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
         }
         @media (max-width: 991.98px) {
             #sidebar {
-                margin-left: calc(-1 * var(--sidebar-width));
+                transform: translateX(-100%);
             }
             #sidebar.active {
-                margin-left: 0;
+                transform: translateX(0);
+                box-shadow: 0 0 40px rgba(15, 23, 42, 0.35);
             }
             #main-wrapper {
                 margin-left: 0;
             }
         }
+        @media (prefers-reduced-motion: reduce) {
+            #sidebar {
+                transition: none;
+            }
+        }
     </style>
+    @include('partials.motion')
     @stack('styles')
 </head>
 <body>

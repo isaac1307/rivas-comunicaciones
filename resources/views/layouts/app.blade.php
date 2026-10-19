@@ -6,103 +6,141 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Rivas Comunicaciones') | Tu Conexión de Alta Velocidad</title>
     
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Bootstrap 5.3 CSS & Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
         :root {
-            --rc-primary: #0d6efd;
-            --rc-primary-dark: #0a58ca;
-            --rc-accent: #00d2d3;
-            --rc-dark: #0f172a;
+            --rc-primary: #0284c7;
+            --rc-primary-dark: #0369a1;
+            --rc-primary-light: #e0f2fe;
+            --rc-accent: #38bdf8;
+            --rc-dark: #0b1329;
+            --rc-dark-surface: #111e3b;
+            --rc-ink: #0f172a;
+            --rc-body: #334155;
+            --rc-muted: #64748b;
+            --rc-border: #e2e8f0;
+            --rc-surface: #ffffff;
+            --rc-bg: #f8fafc;
         }
         body {
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #334155;
-            background-color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            color: var(--rc-body);
+            background-color: var(--rc-bg);
+            font-size: 1rem;
+            line-height: 1.6;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         .main-content {
             flex: 1 0 auto;
         }
         .navbar-brand-logo {
             font-weight: 800;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.025em;
             color: var(--rc-primary);
         }
-        .hero-banner {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d6efd 100%);
-            color: white;
-            padding: 5rem 0;
-            border-radius: 0 0 2rem 2rem;
-        }
         .card-plan {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            border: 1px solid #e2e8f0;
-            border-radius: 1rem;
+            transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+            border: 1px solid var(--rc-border);
+            border-radius: 1.25rem;
+            background-color: var(--rc-surface);
         }
-        .card-plan:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        @media (hover: hover) and (pointer: fine) {
+            .card-plan:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 8px -4px rgba(15, 23, 42, 0.04);
+            }
         }
         .badge-speed {
-            background-color: #e0f2fe;
+            background-color: #f0f9ff;
             color: #0369a1;
-            font-weight: 600;
+            font-weight: 700;
             border-radius: 9999px;
-            padding: 0.35rem 0.75rem;
+            padding: 0.45rem 1rem;
+            font-size: 0.875rem;
+            letter-spacing: -0.01em;
+        }
+        .site-navbar {
+            background-color: var(--rc-dark);
+        }
+        .site-navbar .nav-link {
+            color: #e2e8f0;
+            font-weight: 500;
+            padding: 0.5rem 0.85rem;
+            border-radius: 0.5rem;
+            transition: color 150ms ease, background-color 150ms ease;
+        }
+        .site-navbar .nav-link:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        .site-navbar .nav-link.active {
+            color: #38bdf8;
+            font-weight: 700;
+            background-color: rgba(2, 132, 199, 0.16);
         }
         footer {
-            background-color: #0f172a;
+            background-color: var(--rc-dark);
             color: #94a3b8;
         }
         footer a {
             color: #cbd5e1;
             text-decoration: none;
-            transition: color 0.15s;
+            transition: color 150ms ease;
         }
         footer a:hover {
             color: #38bdf8;
         }
     </style>
+    @include('partials.motion')
     @stack('styles')
 </head>
 <body>
 
     <!-- Navegación Principal -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark site-navbar sticky-top py-3">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('home') }}">
-                <span class="badge bg-primary fs-5 p-2 rounded-3"><i class="bi bi-broadcast"></i></span>
-                <span class="fw-bold tracking-tight text-white">Rivas <span class="text-primary">Comunicaciones</span></span>
+                <span class="d-inline-flex align-items-center justify-content-center p-2 rounded-3 text-white" style="background-color: var(--rc-primary); width: 36px; height: 36px;">
+                    <i class="bi bi-broadcast"></i>
+                </span>
+                <span class="fw-extrabold text-white tracking-tight fs-5">Rivas <span style="color: var(--rc-accent);">Comunicaciones</span></span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Navegación móvil">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Navegación móvil">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-1">
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('home') ? 'active fw-bold' : '' }}" href="{{ route('home') }}">Inicio</a>
+                        <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">Inicio</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('planes.index') ? 'active fw-bold' : '' }}" href="{{ route('planes.index') }}">Planes</a>
+                        <a class="nav-link {{ request()->routeIs('planes.index') ? 'active' : '' }}" href="{{ route('planes.index') }}">Planes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('promociones.index') ? 'active fw-bold' : '' }}" href="{{ route('promociones.index') }}">Promociones</a>
+                        <a class="nav-link {{ request()->routeIs('promociones.index') ? 'active' : '' }}" href="{{ route('promociones.index') }}">Promociones</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('cobertura') ? 'active fw-bold' : '' }}" href="{{ route('cobertura') }}">Cobertura</a>
+                        <a class="nav-link {{ request()->routeIs('cobertura') ? 'active' : '' }}" href="{{ route('cobertura') }}">Cobertura</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('nosotros') ? 'active fw-bold' : '' }}" href="{{ route('nosotros') }}">Nosotros</a>
+                        <a class="nav-link {{ request()->routeIs('nosotros') ? 'active' : '' }}" href="{{ route('nosotros') }}">Nosotros</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('contacto') ? 'active fw-bold' : '' }}" href="{{ route('contacto') }}">Contacto</a>
+                        <a class="nav-link {{ request()->routeIs('contacto') ? 'active' : '' }}" href="{{ route('contacto') }}">Contacto</a>
                     </li>
                 </ul>
 
@@ -110,31 +148,31 @@
                     <!-- Formulario Rápido de Consulta de Folio -->
                     <form class="d-flex" role="search" onsubmit="event.preventDefault(); const f = document.getElementById('folioInput').value.trim(); if(f.startsWith('RES-')) { window.location.href='/reservaciones/'+f; } else if(f.startsWith('TKT-')) { window.location.href='/soporte/ticket/'+f; } else if(f) { window.location.href='/reservaciones/'+f; }">
                         <div class="input-group input-group-sm">
-                            <input class="form-control" type="search" id="folioInput" placeholder="Consultar Folio (RES/TKT)" aria-label="Folio">
-                            <button class="btn btn-outline-light" type="submit" title="Buscar Folio"><i class="bi bi-search"></i></button>
+                            <input class="form-control text-white bg-transparent border-secondary" style="border-color: rgba(255,255,255,0.2) !important; font-size: 0.85rem;" type="search" id="folioInput" placeholder="Folio (RES/TKT)" aria-label="Folio">
+                            <button class="btn btn-outline-light border-secondary" style="border-color: rgba(255,255,255,0.2) !important;" type="submit" title="Buscar Folio"><i class="bi bi-search"></i></button>
                         </div>
                     </form>
 
                     <!-- Dropdown Soporte / Tickets -->
                     <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-info dropdown-toggle text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-headset me-1"></i> Soporte
+                        <button class="btn btn-sm btn-outline-light text-nowrap" style="border-color: rgba(255,255,255,0.2);" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-headset me-1" style="color: var(--rc-accent);"></i> Soporte
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><a class="dropdown-item" href="{{ route('tickets.create') }}"><i class="bi bi-plus-circle me-2 text-primary"></i> Levantar Ticket</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Atención 24/7</h6></li>
-                            <li><span class="dropdown-item-text text-muted small"><i class="bi bi-telephone me-2"></i> 777-123-4567</span></li>
+                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" style="background: var(--rc-dark-surface); border: 1px solid rgba(255,255,255,0.1) !important;">
+                            <li><a class="dropdown-item text-white" href="{{ route('tickets.create') }}"><i class="bi bi-plus-circle me-2" style="color: var(--rc-accent);"></i> Levantar Ticket</a></li>
+                            <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                            <li><h6 class="dropdown-header text-uppercase small" style="color: #94a3b8; font-size: 0.7rem; letter-spacing: 0.05em;">Atención Telefónica 24/7</h6></li>
+                            <li><span class="dropdown-item-text text-light small fw-semibold"><i class="bi bi-telephone me-2 text-primary"></i> (777) 123-4567</span></li>
                         </ul>
                     </div>
 
                     <!-- Botón Destacado Solicitar Instalación -->
-                    <a href="{{ route('reservaciones.create') }}" class="btn btn-sm btn-primary text-nowrap shadow-sm fw-semibold">
+                    <a href="{{ route('reservaciones.create') }}" class="btn btn-sm text-white text-nowrap fw-bold px-3" style="background-color: var(--rc-primary);">
                         <i class="bi bi-calendar-check me-1"></i> Contratar Ahora
                     </a>
 
                     <!-- Enlace Admin -->
-                    <a href="{{ route('admin.login') }}" class="btn btn-sm btn-outline-secondary text-nowrap" title="Acceso Administrativo">
+                    <a href="{{ route('admin.login') }}" class="btn btn-sm btn-outline-light border-0 text-secondary" title="Acceso Administrativo">
                         <i class="bi bi-lock-fill"></i>
                     </a>
                 </div>
@@ -225,9 +263,7 @@
                 </div>
             </div>
 
-            <hr class="border-secondary my-4 opacity-25">
-
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center small text-secondary">
+            <div class="pt-4 mt-5 d-flex flex-column flex-md-row justify-content-between align-items-center small text-secondary" style="border-top: 1px solid rgba(255, 255, 255, 0.08);">
                 <p class="mb-2 mb-md-0">&copy; {{ date('Y') }} Rivas Comunicaciones. Todos los derechos reservados.</p>
                 <div class="d-flex gap-3">
                     <span>Monitoreo 24/7</span>

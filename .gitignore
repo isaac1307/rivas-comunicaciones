@@ -23,6 +23,7 @@ yarn-error.log
 /.vscode
 /.zed
 /.agents
+/.taste-skill
 /.amp
 /.claude
 /.cursor
