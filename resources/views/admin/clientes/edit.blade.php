@@ -75,9 +75,40 @@
                 <label for="estado" class="form-label fw-bold small">Estado *</label>
                 <select class="form-select @error('estado') is-invalid @enderror" id="estado" name="estado" required>
                     <option value="activo" {{ old('estado', $cliente->estado) === 'activo' ? 'selected' : '' }}>Activo</option>
+                    <option value="suspendido" {{ old('estado', $cliente->estado) === 'suspendido' ? 'selected' : '' }}>Suspendido (Corte por mora/temporal)</option>
                     <option value="inactivo" {{ old('estado', $cliente->estado) === 'inactivo' ? 'selected' : '' }}>Inactivo</option>
                 </select>
                 @error('estado')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-12 mt-3">
+                <h6 class="fw-bold border-bottom pb-2 text-primary">
+                    <i class="bi bi-router me-2"></i>Parámetros Técnicos de Red / WISP
+                </h6>
+            </div>
+
+            <div class="col-md-4">
+                <label for="serie_ont" class="form-label fw-bold small">Número de Serie ONT / MAC</label>
+                <input type="text" class="form-control @error('serie_ont') is-invalid @enderror" id="serie_ont" name="serie_ont" value="{{ old('serie_ont', $cliente->serie_ont) }}" placeholder="HWTC-XXXXXXXX">
+                @error('serie_ont')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-md-4">
+                <label for="usuario_pppoe" class="form-label fw-bold small">Usuario PPPoE / IP Asignada</label>
+                <input type="text" class="form-control @error('usuario_pppoe') is-invalid @enderror" id="usuario_pppoe" name="usuario_pppoe" value="{{ old('usuario_pppoe', $cliente->usuario_pppoe) }}" placeholder="usr_cliente_01">
+                @error('usuario_pppoe')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-md-4">
+                <label for="coordenadas_gps" class="form-label fw-bold small">Coordenadas GPS (Lat, Long)</label>
+                <input type="text" class="form-control @error('coordenadas_gps') is-invalid @enderror" id="coordenadas_gps" name="coordenadas_gps" value="{{ old('coordenadas_gps', $cliente->coordenadas_gps) }}" placeholder="18.9242, -99.2215">
+                @error('coordenadas_gps')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>

@@ -30,6 +30,7 @@ class StorePagoRequest extends FormRequest
             'referencia' => ['nullable', 'string', 'max:100'],
             'fecha_pago' => ['nullable', 'date'],
             'notas' => ['nullable', 'string', 'max:1000'],
+            'permitir_saldo_a_favor' => ['nullable', 'boolean'],
         ];
     }
 

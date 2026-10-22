@@ -88,4 +88,47 @@ class Reservacion extends Model
     {
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
+
+    /**
+     * Devuelve el teléfono parcialmente enmascarado para vistas públicas.
+     */
+    public function telefonoEnmascarado(): string
+    {
+        $tel = preg_replace('/\D/', '', (string) $this->telefono) ?? '';
+        if (strlen($tel) < 4) {
+            return '***-***-****';
+        }
+
+        $ultimos4 = substr($tel, -4);
+
+        return '***-***-'.$ultimos4;
+    }
+
+    /**
+     * Devuelve la dirección parcialmente enmascarada para vistas públicas.
+     */
+    public function direccionEnmascarada(): string
+    {
+        $dir = trim((string) $this->direccion);
+        $partes = explode(',', $dir);
+
+        if (count($partes) > 1) {
+            return 'Ubicación: '.trim($partes[1]).' (Número exterior y calle resguardados)';
+        }
+
+        return substr($dir, 0, min(8, strlen($dir))).'*** (Domicilio exacto resguardado por privacidad)';
+    }
+
+    /**
+     * Devuelve el nombre con inicial y asteriscos si se requiere.
+     */
+    public function nombreEnmascarado(): string
+    {
+        $partes = explode(' ', trim((string) $this->nombre_solicitante));
+        if (count($partes) <= 1) {
+            return $this->nombre_solicitante;
+        }
+
+        return $partes[0].' '.substr($partes[1], 0, 1).'***';
+    }
 }

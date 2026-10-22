@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $descripcion
  * @property string|null $tabla_afectada
  * @property int|null $registro_id
+ * @property array<string, mixed>|null $valores_anteriores
+ * @property array<string, mixed>|null $valores_nuevos
  * @property string|null $ip_origen
  */
 class Bitacora extends Model
@@ -39,8 +41,23 @@ class Bitacora extends Model
         'descripcion',
         'tabla_afectada',
         'registro_id',
+        'valores_anteriores',
+        'valores_nuevos',
         'ip_origen',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'valores_anteriores' => 'array',
+            'valores_nuevos' => 'array',
+        ];
+    }
 
     /**
      * Usuario que realizó la acción auditada.

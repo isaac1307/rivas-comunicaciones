@@ -23,10 +23,15 @@ class GenerarCargosMensuales
         $fechaVencimiento = $periodo->copy()->startOfMonth()->day($diaVencimiento);
         $creados = 0;
 
-        Cliente::query()
-            ->activo()
-            ->whereNotNull('plan_id')
-            ->whereDoesntHave('cargos', fn ($query) => $query
+        $query = Cliente::query();
+        if (config('cobranza.facturar_suspendidos', false)) {
+            $query->whereIn('estado', ['activo', 'suspendido']);
+        } else {
+            $query->activo();
+        }
+
+        $query->whereNotNull('plan_id')
+            ->whereDoesntHave('cargos', fn ($q) => $q
                 ->where('tipo', 'mensualidad')
                 ->where('periodo', $clavePeriodo))
             ->with('plan')
@@ -38,16 +43,34 @@ class GenerarCargosMensuales
                             continue;
                         }
 
+                        $montoCargo = (float) $cliente->plan->precio_mensual;
+                        $saldoFavor = (float) $cliente->saldo_a_favor;
+                        $montoPagado = 0.00;
+                        $estadoCargo = 'pendiente';
+
+                        if ($saldoFavor > 0) {
+                            $descuentoSaldoFavor = min($saldoFavor, $montoCargo);
+                            $montoPagado = $descuentoSaldoFavor;
+                            $cliente->saldo_a_favor = (string) round($saldoFavor - $descuentoSaldoFavor, 2);
+                            $cliente->save();
+
+                            if ($montoPagado >= $montoCargo) {
+                                $estadoCargo = 'pagado';
+                            } elseif ($montoPagado > 0) {
+                                $estadoCargo = 'parcial';
+                            }
+                        }
+
                         Cargo::create([
                             'cliente_id' => $cliente->id,
                             'plan_id' => $cliente->plan_id,
                             'tipo' => 'mensualidad',
                             'periodo' => $clavePeriodo,
                             'concepto' => 'Mensualidad '.$periodo->locale('es')->translatedFormat('F Y').' - '.$cliente->plan->nombre,
-                            'monto' => $cliente->plan->precio_mensual,
-                            'monto_pagado' => 0,
+                            'monto' => $montoCargo,
+                            'monto_pagado' => $montoPagado,
                             'fecha_vencimiento' => $fechaVencimiento->toDateString(),
-                            'estado' => 'pendiente',
+                            'estado' => $estadoCargo,
                         ]);
 
                         $creados++;

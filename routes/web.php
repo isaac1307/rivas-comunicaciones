@@ -34,15 +34,15 @@ Route::get('/planes', [PublicPlanController::class, 'index'])->name('planes.inde
 Route::get('/promociones', [PublicPromocionController::class, 'index'])->name('promociones.index');
 
 Route::get('/reservaciones/crear', [PublicReservacionController::class, 'create'])->name('reservaciones.create');
-Route::post('/reservaciones', [PublicReservacionController::class, 'store'])->name('reservaciones.store');
-Route::get('/reservaciones/{folio}', [PublicReservacionController::class, 'show'])->name('reservaciones.show');
+Route::post('/reservaciones', [PublicReservacionController::class, 'store'])->middleware('throttle:10,1')->name('reservaciones.store');
+Route::get('/reservaciones/{folio}', [PublicReservacionController::class, 'show'])->middleware('throttle:30,1')->name('reservaciones.show');
 
 Route::get('/soporte/ticket/crear', [PublicTicketController::class, 'create'])->name('tickets.create');
-Route::post('/soporte/ticket', [PublicTicketController::class, 'store'])->name('tickets.store');
-Route::get('/soporte/ticket/{folio}', [PublicTicketController::class, 'show'])->name('tickets.show');
+Route::post('/soporte/ticket', [PublicTicketController::class, 'store'])->middleware('throttle:10,1')->name('tickets.store');
+Route::get('/soporte/ticket/{folio}', [PublicTicketController::class, 'show'])->middleware('throttle:30,1')->name('tickets.show');
 
 Route::get('/contacto', [ContactoController::class, 'index'])->name('contacto');
-Route::post('/contacto', [ContactoController::class, 'store'])->name('contacto.store');
+Route::post('/contacto', [ContactoController::class, 'store'])->middleware('throttle:10,1')->name('contacto.store');
 
 /*
 |--------------------------------------------------------------------------

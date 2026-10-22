@@ -18,9 +18,15 @@ use Illuminate\Support\Carbon;
  * @property string $telefono
  * @property string|null $correo_electronico
  * @property int|null $plan_id
+ * @property int|null $router_id
  * @property Carbon $fecha_alta
  * @property string $estado
+ * @property string $saldo_a_favor
  * @property string|null $notas
+ * @property string|null $serie_ont
+ * @property string|null $usuario_pppoe
+ * @property string|null $coordenadas_gps
+ * @property string|null $ip_asignada
  * @property float|string|null $total_cargos
  * @property float|string|null $total_pagado
  * @property int|null $cargos_vencidos_count
@@ -48,9 +54,14 @@ class Cliente extends Model
         'telefono',
         'correo_electronico',
         'plan_id',
+        'router_id',
         'fecha_alta',
         'estado',
+        'saldo_a_favor',
         'notas',
+        'serie_ont',
+        'usuario_pppoe',
+        'coordenadas_gps',
     ];
 
     /**
@@ -62,6 +73,7 @@ class Cliente extends Model
     {
         return [
             'fecha_alta' => 'date',
+            'saldo_a_favor' => 'decimal:2',
         ];
     }
 
@@ -73,6 +85,16 @@ class Cliente extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class, 'plan_id');
+    }
+
+    /**
+     * Enrutador MikroTik (nodo) asignado al cliente.
+     *
+     * @return BelongsTo<Router, $this>
+     */
+    public function router(): BelongsTo
+    {
+        return $this->belongsTo(Router::class, 'router_id');
     }
 
     /**
@@ -176,5 +198,57 @@ class Cliente extends Model
     public function scopeMorosos(Builder $query): Builder
     {
         return $query->whereHas('cargos', fn (Builder $q) => $q->vencidos());
+    }
+
+    /**
+     * Scope para clientes en estado suspendido.
+     *
+     * @param  Builder<Cliente>  $query
+     * @return Builder<Cliente>
+     */
+    public function scopeSuspendido(Builder $query): Builder
+    {
+        return $query->where('estado', 'suspendido');
+    }
+
+    /**
+     * Scope para búsqueda flexible por nombre, teléfono, dirección, ONT o usuario PPPoE.
+     *
+     * @param  Builder<Cliente>  $query
+     * @return Builder<Cliente>
+     */
+    public function scopeBuscar(Builder $query, string $buscar): Builder
+    {
+        return $query->where(function (Builder $q) use ($buscar) {
+            $q->where('nombre_completo', 'like', "%{$buscar}%")
+                ->orWhere('telefono', 'like', "%{$buscar}%")
+                ->orWhere('direccion', 'like', "%{$buscar}%")
+                ->orWhere('serie_ont', 'like', "%{$buscar}%")
+                ->orWhere('usuario_pppoe', 'like', "%{$buscar}%");
+        });
+    }
+
+    /**
+     * Indica si el cliente está en estado suspendido.
+     */
+    public function isSuspendido(): bool
+    {
+        return $this->estado === 'suspendido';
+    }
+
+    /**
+     * Obtiene la IP asignada del cliente para el control en MikroTik (usando usuario_pppoe por defecto).
+     */
+    public function getIpAsignadaAttribute(): ?string
+    {
+        return $this->attributes['ip_asignada'] ?? $this->usuario_pppoe;
+    }
+
+    /**
+     * Permite fijar dinámicamente la IP asignada.
+     */
+    public function setIpAsignadaAttribute(?string $value): void
+    {
+        $this->attributes['ip_asignada'] = $value;
     }
 }

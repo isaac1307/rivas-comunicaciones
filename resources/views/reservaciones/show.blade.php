@@ -53,12 +53,12 @@
 
                     <div class="col-md-6">
                         <span class="small text-muted d-block">Teléfono:</span>
-                        <div class="fw-bold text-dark fs-5"><i class="bi bi-telephone me-1 text-primary"></i> {{ $reservacion->telefono }}</div>
+                        <div class="fw-bold text-dark fs-5"><i class="bi bi-telephone me-1 text-primary"></i> {{ $reservacion->telefonoEnmascarado() }}</div>
                     </div>
 
                     <div class="col-md-6">
                         <span class="small text-muted d-block">Correo Electrónico:</span>
-                        <div class="fw-semibold text-dark">{{ $reservacion->correo_electronico ?: 'No especificado' }}</div>
+                        <div class="fw-semibold text-dark">{{ $reservacion->correo_electronico ? substr($reservacion->correo_electronico, 0, 3).'***@***' : 'No especificado' }}</div>
                     </div>
 
                     <div class="col-md-6">
@@ -68,7 +68,7 @@
 
                     <div class="col-md-12">
                         <span class="small text-muted d-block">Dirección de Instalación:</span>
-                        <div class="fw-semibold text-dark"><i class="bi bi-geo-alt me-1 text-primary"></i> {{ $reservacion->direccion }}</div>
+                        <div class="fw-semibold text-dark"><i class="bi bi-geo-alt me-1 text-primary"></i> {{ $reservacion->direccionEnmascarada() }}</div>
                     </div>
 
                     <div class="col-md-6">

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $cliente_id
  * @property int|null $usuario_id
  * @property string $monto
+ * @property string $monto_saldo_favor
  * @property string $metodo_pago
  * @property string|null $referencia
  * @property Carbon $fecha_pago
@@ -63,6 +64,7 @@ class Pago extends Model
         'cliente_id',
         'usuario_id',
         'monto',
+        'monto_saldo_favor',
         'metodo_pago',
         'referencia',
         'fecha_pago',
@@ -80,6 +82,7 @@ class Pago extends Model
     {
         return [
             'monto' => 'decimal:2',
+            'monto_saldo_favor' => 'decimal:2',
             'fecha_pago' => 'datetime',
         ];
     }

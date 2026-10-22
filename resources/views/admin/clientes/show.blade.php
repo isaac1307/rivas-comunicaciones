@@ -44,26 +44,47 @@
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
             <span class="text-muted small">Estatus y Fecha de Alta</span>
             <div class="mt-1 d-flex align-items-center gap-2">
-                <span class="badge {{ $cliente->estado === 'activo' ? 'bg-success' : 'bg-secondary' }} fs-6">
-                    {{ ucfirst($cliente->estado) }}
-                </span>
+                @if ($cliente->estado === 'activo')
+                    <span class="badge bg-success fs-6">Activo</span>
+                @elseif ($cliente->estado === 'suspendido')
+                    <span class="badge bg-warning text-dark fs-6">Suspendido</span>
+                @else
+                    <span class="badge bg-secondary fs-6">Inactivo</span>
+                @endif
                 <span class="text-muted small">Desde {{ $cliente->fecha_alta->format('d/m/Y') }}</span>
             </div>
+            @if ((float) $cliente->saldo_a_favor > 0)
+                <div class="mt-2 text-success small fw-bold">
+                    <i class="bi bi-wallet2 me-1"></i> Saldo a favor: ${{ number_format($cliente->saldo_a_favor, 2) }}
+                </div>
+            @endif
         </div>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
-    <h5 class="fw-bold text-dark mb-2">Dirección de Instalación</h5>
-    <p class="text-dark mb-3"><i class="bi bi-geo-alt text-primary me-1"></i> {{ $cliente->direccion }}</p>
-
-    @if ($cliente->notas)
-        <h6 class="fw-bold text-dark mb-1">Notas del Expediente</h6>
-        <p class="text-muted small mb-0">{{ $cliente->notas }}</p>
-    @endif
+    <div class="row g-3">
+        <div class="col-md-6">
+            <h5 class="fw-bold text-dark mb-2">Dirección de Instalación</h5>
+            <p class="text-dark mb-0"><i class="bi bi-geo-alt text-primary me-1"></i> {{ $cliente->direccion }}</p>
+        </div>
+        <div class="col-md-6">
+            <h5 class="fw-bold text-dark mb-2">Parámetros Técnicos WISP</h5>
+            <div class="small text-muted">
+                <div><strong>Serie ONT / MAC:</strong> {{ $cliente->serie_ont ?: 'No registrada' }}</div>
+                <div><strong>Usuario PPPoE:</strong> {{ $cliente->usuario_pppoe ?: 'No asignado' }}</div>
+                <div><strong>Coordenadas GPS:</strong> {{ $cliente->coordenadas_gps ?: 'No registradas' }}</div>
+            </div>
+        </div>
+        @if ($cliente->notas)
+            <div class="col-12 mt-3 pt-3 border-top">
+                <h6 class="fw-bold text-dark mb-1">Notas del Expediente</h6>
+                <p class="text-muted small mb-0">{{ $cliente->notas }}</p>
+            </div>
+        @endif
+    </div>
 </div>
 
 @if ($cliente->reservaciones && $cliente->reservaciones->isNotEmpty())

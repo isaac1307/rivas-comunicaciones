@@ -20,13 +20,16 @@
             <div class="col-md-5">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="buscar" value="{{ $buscar }}" class="form-control border-start-0" placeholder="Buscar por nombre, teléfono o dirección...">
+                    <input type="text" name="buscar" value="{{ $buscar }}" class="form-control border-start-0" placeholder="Buscar por nombre, teléfono, ONT, PPPoE o dirección...">
                 </div>
             </div>
             <div class="col-md-5">
                 <div class="btn-group btn-group-sm w-100" role="group">
                     <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'activo']) }}" class="btn {{ $estado === 'activo' ? 'btn-success' : 'btn-outline-secondary' }}">
                         <i class="bi bi-person-check me-1"></i> Clientes Activos ({{ $totales['activos'] }})
+                    </a>
+                    <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'suspendido']) }}" class="btn {{ $estado === 'suspendido' ? 'btn-warning text-dark' : 'btn-outline-secondary' }}">
+                        Suspendidos ({{ $totales['suspendidos'] }})
                     </a>
                     <a href="{{ route('admin.clientes.index', ['buscar' => $buscar, 'estado' => 'todos']) }}" class="btn {{ $estado === 'todos' ? 'btn-primary' : 'btn-outline-secondary' }}">
                         Todos ({{ $totales['total'] }})
@@ -86,10 +89,19 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge {{ $cli->estado === 'activo' ? 'bg-success' : 'bg-secondary' }}">
-                                    <i class="bi {{ $cli->estado === 'activo' ? 'bi-check-circle' : 'bi-dash-circle' }} me-1"></i>
-                                    {{ ucfirst($cli->estado) }}
-                                </span>
+                                @if ($cli->estado === 'activo')
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i> Activo
+                                    </span>
+                                @elseif ($cli->estado === 'suspendido')
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-pause-circle me-1"></i> Suspendido
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-dash-circle me-1"></i> Inactivo
+                                    </span>
+                                @endif
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">

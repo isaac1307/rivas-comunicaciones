@@ -18,30 +18,60 @@ trait Auditable
             $identificador = static::obtenerIdentificadorAudit($model);
             $tabla = $model->getTable();
             $desc = "Alta en {$tabla} #{$model->getKey()}".($identificador ? " ({$identificador})" : '');
-            static::registrarBitacora($model, 'creacion', Str::limit($desc, 290));
+            $valoresNuevos = static::filtrarAtributosAudit($model->getAttributes());
+
+            static::registrarBitacora($model, 'creacion', Str::limit($desc, 290), null, $valoresNuevos);
         });
 
         static::updated(function (Model $model) {
-            $ignorar = ['updated_at', 'remember_token', 'ultimo_acceso', 'two_factor_recovery_codes', 'two_factor_secret'];
-            $cambios = array_diff_key($model->getDirty(), array_flip($ignorar));
+            $cambiosNuevos = static::filtrarAtributosAudit($model->getDirty());
 
-            if (empty($cambios)) {
+            if (empty($cambiosNuevos)) {
                 return;
             }
 
+            $cambiosAnteriores = static::filtrarAtributosAudit(
+                array_intersect_key($model->getOriginal(), $cambiosNuevos)
+            );
+
             $identificador = static::obtenerIdentificadorAudit($model);
             $tabla = $model->getTable();
-            $campos = implode(', ', array_keys($cambios));
+            $campos = implode(', ', array_keys($cambiosNuevos));
             $desc = "Actualización en {$tabla} #{$model->getKey()}".($identificador ? " ({$identificador})" : '').": modificó [{$campos}]";
-            static::registrarBitacora($model, 'actualizacion', Str::limit($desc, 290));
+
+            static::registrarBitacora($model, 'actualizacion', Str::limit($desc, 290), $cambiosAnteriores, $cambiosNuevos);
         });
 
         static::deleted(function (Model $model) {
             $identificador = static::obtenerIdentificadorAudit($model);
             $tabla = $model->getTable();
             $desc = "Baja en {$tabla} #{$model->getKey()}".($identificador ? " ({$identificador})" : '');
-            static::registrarBitacora($model, 'eliminacion', Str::limit($desc, 290));
+            $valoresAnteriores = static::filtrarAtributosAudit($model->getOriginal());
+
+            static::registrarBitacora($model, 'eliminacion', Str::limit($desc, 290), $valoresAnteriores, null);
         });
+    }
+
+    /**
+     * Filtra atributos sensibles o irrelevantes para la auditoría.
+     *
+     * @param  array<string, mixed>  $atributos
+     * @return array<string, mixed>
+     */
+    protected static function filtrarAtributosAudit(array $atributos): array
+    {
+        $ignorar = [
+            'password',
+            'api_password',
+            'remember_token',
+            'ultimo_acceso',
+            'two_factor_recovery_codes',
+            'two_factor_secret',
+            'two_factor_confirmed_at',
+            'updated_at',
+        ];
+
+        return array_diff_key($atributos, array_flip($ignorar));
     }
 
     /**
@@ -74,17 +104,32 @@ trait Auditable
 
     /**
      * Registra un evento en la bitácora del sistema.
+     *
+     * @param  array<string, mixed>|null  $valoresAnteriores
+     * @param  array<string, mixed>|null  $valoresNuevos
      */
-    protected static function registrarBitacora(Model $model, string $accion, string $descripcion): void
-    {
+    protected static function registrarBitacora(
+        Model $model,
+        string $accion,
+        string $descripcion,
+        ?array $valoresAnteriores = null,
+        ?array $valoresNuevos = null
+    ): void {
         try {
+            $ip = request()->ip();
+            if (empty($ip) && app()->runningInConsole()) {
+                $ip = 'CLI';
+            }
+
             Bitacora::create([
                 'usuario_id' => Auth::id(),
                 'accion' => $accion,
                 'descripcion' => $descripcion,
                 'tabla_afectada' => $model->getTable(),
                 'registro_id' => $model->getKey(),
-                'ip_origen' => request()->ip(),
+                'valores_anteriores' => $valoresAnteriores,
+                'valores_nuevos' => $valoresNuevos,
+                'ip_origen' => $ip,
             ]);
         } catch (\Throwable $e) {
             // Evitar interrumpir la operación principal si falla el log de auditoría

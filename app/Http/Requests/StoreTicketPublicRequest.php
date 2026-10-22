@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Cliente;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreTicketPublicRequest extends FormRequest
 {
@@ -23,10 +25,43 @@ class StoreTicketPublicRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cliente_id' => ['required', 'exists:clientes,id'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'cliente_id' => ['nullable', 'exists:clientes,id'],
             'categoria' => ['required', 'in:falla_servicio,soporte_tecnico,consulta,cambio_plan,cancelacion'],
             'descripcion' => ['required', 'string', 'min:10', 'max:2000'],
         ];
+    }
+
+    /**
+     * Validación posterior para verificar teléfono registrado cuando no se envía cliente_id.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function ($validator) {
+            $clienteId = $this->input('cliente_id');
+            $telefono = trim((string) $this->input('telefono', ''));
+
+            if (! empty($clienteId)) {
+                return;
+            }
+
+            if ($telefono === '') {
+                $validator->errors()->add('telefono', 'Debe ingresar el número telefónico asociado a su cuenta.');
+
+                return;
+            }
+
+            $cliente = Cliente::where('telefono', $telefono)
+                ->whereIn('estado', ['activo', 'suspendido'])
+                ->first();
+
+            if (! $cliente) {
+                $validator->errors()->add(
+                    'telefono',
+                    'No encontramos una cuenta activa asociada a este número telefónico. Verifica tus datos o contáctanos por WhatsApp/teléfono.'
+                );
+            }
+        });
     }
 
     /**
@@ -37,8 +72,7 @@ class StoreTicketPublicRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'cliente_id.required' => 'Debe seleccionar o indicar su cuenta de cliente.',
-            'cliente_id.exists' => 'El cliente seleccionado no se encuentra en el sistema.',
+            'cliente_id.exists' => 'El cliente indicado no se encuentra en el sistema.',
             'categoria.required' => 'La categoría del reporte es obligatoria.',
             'categoria.in' => 'La categoría seleccionada no es válida.',
             'descripcion.required' => 'Por favor describa el motivo de su ticket o reporte.',

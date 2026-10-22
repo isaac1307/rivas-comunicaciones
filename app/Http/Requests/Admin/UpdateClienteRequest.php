@@ -23,9 +23,13 @@ class UpdateClienteRequest extends FormRequest
             'telefono' => ['required', 'string', 'max:15'],
             'correo_electronico' => ['nullable', 'email', 'max:150'],
             'plan_id' => ['nullable', 'exists:planes,id'],
+            'router_id' => ['nullable', 'exists:routers,id'],
             'fecha_alta' => ['required', 'date'],
-            'estado' => ['required', 'in:activo,inactivo'],
+            'estado' => ['required', 'in:activo,suspendido,inactivo'],
             'notas' => ['nullable', 'string', 'max:1000'],
+            'serie_ont' => ['nullable', 'string', 'max:100'],
+            'usuario_pppoe' => ['nullable', 'string', 'max:100'],
+            'coordenadas_gps' => ['nullable', 'string', 'max:100'],
         ];
     }
 

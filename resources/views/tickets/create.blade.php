@@ -18,19 +18,17 @@
 
                     <h5 class="fw-bold text-primary mb-3"><i class="bi bi-person-check-fill me-2"></i> Identificación del Cliente</h5>
                     <div class="mb-4">
-                        <label for="cliente_id" class="form-label fw-semibold small">Selecciona tu Cuenta de Cliente *</label>
-                        <select class="form-select form-select-lg @error('cliente_id') is-invalid @enderror" id="cliente_id" name="cliente_id" required>
-                            <option value="">-- Selecciona tu Nombre o Contrato --</option>
-                            @foreach ($clientes as $cliente)
-                                <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                                    {{ $cliente->nombre_completo }} (Tel: {{ $cliente->telefono }})
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="form-text">Si no localizas tu nombre, comunícate al (777) 123-4567 para vincular tu cuenta.</div>
-                        @error('cliente_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <label for="telefono" class="form-label fw-semibold small">Teléfono Registrado en tu Contrato *</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light"><i class="bi bi-telephone text-primary"></i></span>
+                            <input type="tel" class="form-control @error('telefono') is-invalid @enderror" 
+                                   id="telefono" name="telefono" value="{{ old('telefono') }}" 
+                                   placeholder="Ej: 7771234567 (10 dígitos)" required>
+                            @error('telefono')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="form-text">Validamos tu número telefónico registrado para asociar el reporte a tu cuenta de servicio.</div>
                     </div>
 
                     <h5 class="fw-bold text-primary mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i> Detalle del Reporte</h5>

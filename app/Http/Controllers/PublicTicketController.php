@@ -15,9 +15,7 @@ class PublicTicketController extends Controller
      */
     public function create(): View
     {
-        $clientes = Cliente::activo()->orderBy('nombre_completo', 'asc')->get();
-
-        return view('tickets.create', compact('clientes'));
+        return view('tickets.create');
     }
 
     /**
@@ -26,7 +24,18 @@ class PublicTicketController extends Controller
      */
     public function store(StoreTicketPublicRequest $request): RedirectResponse
     {
-        $ticket = Ticket::create($request->validated());
+        $datos = $request->validated();
+
+        if (empty($datos['cliente_id'])) {
+            $cliente = Cliente::where('telefono', $request->input('telefono'))
+                ->whereIn('estado', ['activo', 'suspendido'])
+                ->firstOrFail();
+            $datos['cliente_id'] = $cliente->id;
+        }
+
+        unset($datos['telefono']);
+
+        $ticket = Ticket::create($datos);
 
         return redirect()->route('tickets.show', $ticket->folio)
             ->with('success', '¡Tu ticket de soporte ha sido generado exitosamente! Conserva tu folio para dar seguimiento.');

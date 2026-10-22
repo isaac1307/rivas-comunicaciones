@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
+use App\Jobs\Red\AsignarPlanRedJob;
 use App\Models\Cliente;
 use App\Models\Plan;
+use App\Models\Router;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -30,11 +31,7 @@ class ClienteController extends Controller
         }
 
         if ($buscar !== '') {
-            $query->where(function (Builder $q) use ($buscar) {
-                $q->where('nombre_completo', 'like', "%{$buscar}%")
-                    ->orWhere('telefono', 'like', "%{$buscar}%")
-                    ->orWhere('direccion', 'like', "%{$buscar}%");
-            });
+            $query->buscar($buscar);
         }
 
         $clientes = $query->orderBy('id', 'desc')->paginate(10)->withQueryString();
@@ -42,6 +39,7 @@ class ClienteController extends Controller
         $totales = [
             'total' => Cliente::count(),
             'activos' => Cliente::where('estado', 'activo')->count(),
+            'suspendidos' => Cliente::where('estado', 'suspendido')->count(),
             'inactivos' => Cliente::where('estado', 'inactivo')->count(),
         ];
 
@@ -63,7 +61,21 @@ class ClienteController extends Controller
      */
     public function store(StoreClienteRequest $request): RedirectResponse
     {
-        Cliente::create($request->validated());
+        $cliente = Cliente::create($request->validated());
+
+        if ($cliente->plan_id && ! empty($cliente->ip_asignada)) {
+            $cliente->loadMissing(['router', 'plan']);
+            $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
+
+            if ($router instanceof Router && $router->isActivo() && $cliente->plan) {
+                AsignarPlanRedJob::dispatch(
+                    $cliente->ip_asignada,
+                    $cliente->nombre_completo,
+                    $router,
+                    $cliente->plan
+                );
+            }
+        }
 
         return redirect()->route('admin.clientes.index')
             ->with('success', 'Cliente dado de alta con éxito.');
@@ -99,6 +111,20 @@ class ClienteController extends Controller
     public function update(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
     {
         $cliente->update($request->validated());
+
+        if ($cliente->plan_id && ! empty($cliente->ip_asignada)) {
+            $cliente->loadMissing(['router', 'plan']);
+            $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
+
+            if ($router instanceof Router && $router->isActivo() && $cliente->plan) {
+                AsignarPlanRedJob::dispatch(
+                    $cliente->ip_asignada,
+                    $cliente->nombre_completo,
+                    $router,
+                    $cliente->plan
+                );
+            }
+        }
 
         return redirect()->route('admin.clientes.index')
             ->with('success', 'Información del cliente actualizada con éxito.');
