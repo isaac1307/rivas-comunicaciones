@@ -58,6 +58,7 @@
                         <th>Nombre Completo</th>
                         <th>Teléfono</th>
                         <th>Plan Contratado</th>
+                        <th>Nodo / Red</th>
                         <th>Fecha Alta</th>
                         <th>Tickets</th>
                         <th>Estado</th>
@@ -71,7 +72,7 @@
                             <td>
                                 <div class="fw-bold text-dark">{{ $cli->nombre_completo }}</div>
                                 <div class="text-muted" style="font-size: 0.8rem;">
-                                    <i class="bi bi-geo-alt me-1"></i>{{ Str::limit($cli->direccion, 40) }}
+                                    <i class="bi bi-geo-alt me-1"></i>{{ Str::limit($cli->direccion, 35) }}
                                 </div>
                             </td>
                             <td>{{ $cli->telefono }}</td>
@@ -80,6 +81,20 @@
                                     <span class="badge bg-primary-subtle text-primary">{{ $cli->plan->nombre }}</span>
                                 @else
                                     <span class="text-muted small">Sin plan</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($cli->router)
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle" title="Nodo MikroTik">
+                                        <i class="bi bi-hdd-network me-1"></i>{{ $cli->router->nombre }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-light text-muted border">Nodo auto</span>
+                                @endif
+                                @if ($cli->ip_asignada)
+                                    <div class="text-muted font-monospace" style="font-size: 0.75rem;">
+                                        IP: {{ $cli->ip_asignada }}
+                                    </div>
                                 @endif
                             </td>
                             <td>{{ $cli->fecha_alta->format('d/m/Y') }}</td>
@@ -102,6 +117,13 @@
                                         <i class="bi bi-dash-circle me-1"></i> Inactivo
                                     </span>
                                 @endif
+                                @if ((float) $cli->saldo_a_favor > 0)
+                                    <div class="mt-1">
+                                        <span class="badge bg-success-subtle text-success" title="Saldo a favor para futuros cargos">
+                                            <i class="bi bi-wallet2 me-1"></i>+${{ number_format($cli->saldo_a_favor, 2) }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
@@ -123,7 +145,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 No se encontraron clientes con los filtros aplicados.
                             </td>
                         </tr>

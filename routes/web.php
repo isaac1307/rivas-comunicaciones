@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PagoController as AdminPagoController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\PromocionController as AdminPromocionController;
 use App\Http\Controllers\Admin\ReservacionController as AdminReservacionController;
+use App\Http\Controllers\Admin\RouterController as AdminRouterController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UsuarioController as AdminUsuarioController;
 use App\Http\Controllers\ContactoController;
@@ -62,6 +63,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('planes', AdminPlanController::class);
             Route::resource('promociones', AdminPromocionController::class);
             Route::resource('clientes', AdminClienteController::class);
+            Route::post('/clientes/{cliente}/suspender', [AdminClienteController::class, 'suspenderServicio'])->name('clientes.suspender');
+            Route::post('/clientes/{cliente}/reconectar', [AdminClienteController::class, 'reconectarServicio'])->name('clientes.reconectar');
 
             Route::resource('reservaciones', AdminReservacionController::class)->only(['index', 'show', 'edit', 'update']);
             Route::resource('tickets', AdminTicketController::class);
@@ -86,6 +89,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/cobranza/cargos/{cargo}/cancelar', [AdminCargoController::class, 'cancelar'])->name('cargos.cancelar');
 
             Route::resource('usuarios', AdminUsuarioController::class)->except(['show']);
+            Route::resource('routers', AdminRouterController::class)->except(['show']);
+            Route::post('/routers/{router}/test-conexion', [AdminRouterController::class, 'testConexion'])->name('routers.test-conexion');
+            Route::post('/routers/{router}/sincronizar-planes', [AdminRouterController::class, 'sincronizarPlanes'])->name('routers.sincronizar-planes');
+            Route::get('/routers/{router}/script', [AdminRouterController::class, 'verScript'])->name('routers.script');
+            Route::get('/routers/{router}/descargar-script', [AdminRouterController::class, 'descargarScript'])->name('routers.descargar-script');
             Route::get('/bitacoras/export', [AdminBitacoraController::class, 'export'])->name('bitacoras.export');
             Route::get('/bitacoras', [AdminBitacoraController::class, 'index'])->name('bitacoras.index');
         });

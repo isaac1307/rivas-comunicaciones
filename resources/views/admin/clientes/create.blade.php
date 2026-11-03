@@ -83,30 +83,48 @@
             </div>
 
             <div class="col-12 mt-3">
-                <h6 class="fw-bold border-bottom pb-2 text-primary">
-                    <i class="bi bi-router me-2"></i>Parámetros Técnicos de Red / WISP
+                <h6 class="fw-bold border-bottom pb-2 text-primary d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-router me-2"></i>Parámetros Técnicos de Red & Conexión MikroTik</span>
+                    <span class="badge bg-primary-subtle text-primary small">Soporte Multi-Nodo</span>
                 </h6>
             </div>
 
-            <div class="col-md-4">
-                <label for="serie_ont" class="form-label fw-bold small">Número de Serie ONT / MAC</label>
-                <input type="text" class="form-control @error('serie_ont') is-invalid @enderror" id="serie_ont" name="serie_ont" value="{{ old('serie_ont') }}" placeholder="HWTC-XXXXXXXX">
-                @error('serie_ont')
+            <div class="col-md-6">
+                <label for="router_id" class="form-label fw-bold small">Nodo / Router MikroTik Asignado</label>
+                <select class="form-select @error('router_id') is-invalid @enderror" id="router_id" name="router_id">
+                    <option value="">-- Sin Nodo Específico (Nodo Activo Principal) --</option>
+                    @foreach ($routers as $router)
+                        <option value="{{ $router->id }}" {{ old('router_id') == $router->id ? 'selected' : '' }}>
+                            {{ $router->nombre }} (IP: {{ $router->ip_address }})
+                        </option>
+                    @endforeach
+                </select>
+                <div class="form-text small">Router MikroTik donde se creará la cola de velocidad y corte por mora.</div>
+                @error('router_id')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
 
-            <div class="col-md-4">
-                <label for="usuario_pppoe" class="form-label fw-bold small">Usuario PPPoE / IP Asignada</label>
-                <input type="text" class="form-control @error('usuario_pppoe') is-invalid @enderror" id="usuario_pppoe" name="usuario_pppoe" value="{{ old('usuario_pppoe') }}" placeholder="usr_cliente_01">
+            <div class="col-md-6">
+                <label for="usuario_pppoe" class="form-label fw-bold small">IP Asignada / Usuario PPPoE</label>
+                <input type="text" class="form-control @error('usuario_pppoe') is-invalid @enderror" id="usuario_pppoe" name="usuario_pppoe" value="{{ old('usuario_pppoe') }}" placeholder="192.168.1.50 ó usr_cliente_01">
+                <div class="form-text small">Dirección IP utilizada para aplicar la Simple Queue y cortes en MikroTik.</div>
                 @error('usuario_pppoe')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
 
-            <div class="col-md-4">
-                <label for="coordenadas_gps" class="form-label fw-bold small">Coordenadas GPS (Lat, Long)</label>
-                <input type="text" class="form-control @error('coordenadas_gps') is-invalid @enderror" id="coordenadas_gps" name="coordenadas_gps" value="{{ old('coordenadas_gps') }}" placeholder="18.9242, -99.2215">
+            <div class="col-md-6">
+                <label for="serie_ont" class="form-label fw-bold small">Número de Serie ONT / Módem MAC</label>
+                <input type="text" class="form-control @error('serie_ont') is-invalid @enderror" id="serie_ont" name="serie_ont" value="{{ old('serie_ont') }}" placeholder="HWTC-XXXXXXXX ó MAC">
+                @error('serie_ont')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-md-6">
+                <label for="coordenadas_gps" class="form-label fw-bold small">Coordenadas GPS (Latitud, Longitud)</label>
+                <input type="text" class="form-control @error('coordenadas_gps') is-invalid @enderror" id="coordenadas_gps" name="coordenadas_gps" value="{{ old('coordenadas_gps') }}" placeholder="Ej: 16.3421, -98.0567">
                 @error('coordenadas_gps')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror

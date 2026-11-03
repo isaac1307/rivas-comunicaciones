@@ -63,7 +63,7 @@ class CobranzaController extends Controller
      */
     public function show(Cliente $cliente): View
     {
-        $cliente->load(['plan']);
+        $cliente->load(['plan', 'router']);
 
         $cargos = $cliente->cargos()
             ->with(['plan', 'pagos'])

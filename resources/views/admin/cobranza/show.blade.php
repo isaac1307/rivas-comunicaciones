@@ -65,9 +65,52 @@
             @else
                 <span class="badge bg-success small mt-1"><i class="bi bi-check2-circle me-1"></i> Cuenta al día</span>
             @endif
+            @if ((float) $cliente->saldo_a_favor > 0)
+                <div class="mt-2 text-success small fw-bold">
+                    <i class="bi bi-wallet2 me-1"></i> Saldo a favor: ${{ number_format($cliente->saldo_a_favor, 2) }}
+                </div>
+            @endif
         </div>
     </div>
 </div>
+
+@if ($cliente->isSuspendido() || $totales['cargosVencidos'] > 0)
+    <div class="alert alert-warning border-0 shadow-sm rounded-3 d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></i>
+            <div>
+                <div class="fw-bold">Servicio Suspendido en MikroTik</div>
+                <div class="small">El cliente se encuentra en la lista de corte (Nodo: <strong>{{ $cliente->router->nombre ?? 'Nodo Principal' }}</strong>, IP: <code>{{ $cliente->ip_asignada ?? 'No asignada' }}</code>). Al liquidar la totalidad de cargos vencidos, el sistema reconectará automáticamente el servicio.</div>
+            </div>
+        </div>
+        <div>
+            <form action="{{ route('admin.clientes.reconectar', $cliente) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Deseas forzar la reconexión de internet para este cliente en MikroTik?');">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
+                    <i class="bi bi-play-circle me-1"></i> Reconectar Internet
+                </button>
+            </form>
+        </div>
+    </div>
+@elseif ($cliente->ip_asignada)
+    <div class="alert alert-success border-0 shadow-sm rounded-3 d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill fs-3 text-success me-3"></i>
+            <div>
+                <div class="fw-bold">Servicio de Internet Activo en MikroTik</div>
+                <div class="small">Conexión operativa en el nodo <strong>{{ $cliente->router->nombre ?? 'Nodo Principal' }}</strong> (IP: <code>{{ $cliente->ip_asignada }}</code>). Sin adeudos vencidos.</div>
+            </div>
+        </div>
+        <div>
+            <form action="{{ route('admin.clientes.suspender', $cliente) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Deseas suspender de inmediato el servicio de internet para este cliente en MikroTik?');">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-danger fw-bold shadow-sm">
+                    <i class="bi bi-pause-circle me-1"></i> Suspender Servicio
+                </button>
+            </form>
+        </div>
+    </div>
+@endif
 
 <div class="row g-4 mb-4">
     <!-- Formulario de Registro de Pago -->
@@ -95,6 +138,13 @@
                                     Liquidar todo
                                 </a>
                             </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="permitir_saldo_a_favor" value="1" id="permitir_saldo_a_favor" {{ old('permitir_saldo_a_favor') ? 'checked' : '' }} onchange="toggleMaxMonto(this)">
+                            <label class="form-check-label small" for="permitir_saldo_a_favor">
+                                Permitir abonar de más y acreditar a <strong>Saldo a Favor</strong>
+                            </label>
                         </div>
 
                         <div class="mb-3">
@@ -317,3 +367,16 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function toggleMaxMonto(checkbox) {
+        const input = document.getElementById('monto');
+        if (checkbox.checked) {
+            input.removeAttribute('max');
+        } else {
+            input.setAttribute('max', '{{ $totales['saldoPendiente'] }}');
+        }
+    }
+</script>
+@endpush

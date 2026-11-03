@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Red\GestionarEstadoServicioCliente;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
@@ -23,7 +24,7 @@ class ClienteController extends Controller
         $estado = (string) $request->input('estado', 'activo');
         $buscar = trim((string) $request->input('buscar', ''));
 
-        $query = Cliente::with('plan')
+        $query = Cliente::with(['plan', 'router'])
             ->withCount('tickets');
 
         if ($estado !== 'todos') {
@@ -52,8 +53,9 @@ class ClienteController extends Controller
     public function create(): View
     {
         $planes = Plan::activo()->get();
+        $routers = Router::where('estado', 'activo')->orderBy('nombre')->get();
 
-        return view('admin.clientes.create', compact('planes'));
+        return view('admin.clientes.create', compact('planes', 'routers'));
     }
 
     /**
@@ -86,7 +88,7 @@ class ClienteController extends Controller
      */
     public function show(Cliente $cliente): View
     {
-        $cliente->load(['plan', 'tickets' => function ($query) {
+        $cliente->load(['plan', 'router', 'tickets' => function ($query) {
             $query->latest();
         }, 'reservaciones' => function ($query) {
             $query->latest();
@@ -101,18 +103,37 @@ class ClienteController extends Controller
     public function edit(Cliente $cliente): View
     {
         $planes = Plan::all();
+        $routers = Router::orderBy('nombre')->get();
 
-        return view('admin.clientes.edit', compact('cliente', 'planes'));
+        return view('admin.clientes.edit', compact('cliente', 'planes', 'routers'));
     }
 
     /**
-     * Actualiza el cliente en la base de datos usando FormRequest.
+     * Actualiza el cliente en la base de datos y sincroniza cortes o planes en MikroTik según corresponda.
      */
-    public function update(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
+    public function update(UpdateClienteRequest $request, Cliente $cliente, GestionarEstadoServicioCliente $gestorRed): RedirectResponse
     {
+        $estadoAnterior = $cliente->estado;
         $cliente->update($request->validated());
+        $estadoNuevo = $cliente->estado;
 
-        if ($cliente->plan_id && ! empty($cliente->ip_asignada)) {
+        $mensajeExito = 'Información del cliente actualizada con éxito.';
+
+        if ($estadoNuevo === 'suspendido' && $estadoAnterior !== 'suspendido') {
+            $resultado = $gestorRed->suspender($cliente);
+            if (! $resultado['success']) {
+                return redirect()->route('admin.clientes.index')
+                    ->with('warning', "Cliente actualizado a suspendido en el sistema, pero ocurrió un aviso en MikroTik: {$resultado['mensaje']}");
+            }
+            $mensajeExito = "Cliente suspendido exitosamente. {$resultado['mensaje']}";
+        } elseif ($estadoNuevo === 'activo' && $estadoAnterior === 'suspendido') {
+            $resultado = $gestorRed->reconectar($cliente);
+            if (! $resultado['success']) {
+                return redirect()->route('admin.clientes.index')
+                    ->with('warning', "Cliente activado en el sistema, pero ocurrió un aviso en MikroTik: {$resultado['mensaje']}");
+            }
+            $mensajeExito = "Cliente reactivado exitosamente. {$resultado['mensaje']}";
+        } elseif ($cliente->estado === 'activo' && $cliente->plan_id && ! empty($cliente->ip_asignada)) {
             $cliente->loadMissing(['router', 'plan']);
             $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
 
@@ -127,7 +148,27 @@ class ClienteController extends Controller
         }
 
         return redirect()->route('admin.clientes.index')
-            ->with('success', 'Información del cliente actualizada con éxito.');
+            ->with('success', $mensajeExito);
+    }
+
+    /**
+     * Suspende de inmediato el servicio de internet del cliente en MikroTik y actualiza su estado.
+     */
+    public function suspenderServicio(Cliente $cliente, GestionarEstadoServicioCliente $gestorRed): RedirectResponse
+    {
+        $resultado = $gestorRed->suspender($cliente);
+
+        return back()->with($resultado['success'] ? 'success' : 'error', $resultado['mensaje']);
+    }
+
+    /**
+     * Reconecta de inmediato el servicio de internet del cliente en MikroTik y actualiza su estado a activo.
+     */
+    public function reconectarServicio(Cliente $cliente, GestionarEstadoServicioCliente $gestorRed): RedirectResponse
+    {
+        $resultado = $gestorRed->reconectar($cliente);
+
+        return back()->with($resultado['success'] ? 'success' : 'error', $resultado['mensaje']);
     }
 
     /**

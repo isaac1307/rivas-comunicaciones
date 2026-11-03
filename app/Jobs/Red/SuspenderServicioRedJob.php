@@ -40,21 +40,38 @@ class SuspenderServicioRedJob implements ShouldQueue
                     'comment' => "Suspendido por sistema - Cliente: {$this->folioCliente}",
                 ]);
 
-            if ($response->successful()) {
-                Log::info("MikroTik [{$this->router->nombre}]: Servicio suspendido exitosamente para cliente {$this->folioCliente} (IP: {$this->ipCliente}).", [
-                    'router_id' => $this->router->id,
-                    'router_nombre' => $this->router->nombre,
-                    'status' => $response->status(),
-                    'respuesta' => $response->json(),
-                ]);
-            } else {
+            if (! $response->successful() && $response->status() !== 400) {
                 Log::error("MikroTik [{$this->router->nombre}]: Falló la suspensión para cliente {$this->folioCliente} (IP: {$this->ipCliente}).", [
                     'router_id' => $this->router->id,
-                    'router_nombre' => $this->router->nombre,
                     'status' => $response->status(),
                     'error' => $response->body(),
                 ]);
             }
+
+            // Cerrar conexiones TCP/UDP activas para que el corte no espere el timeout de NAT/FastTrack
+            $connsRes = Http::withBasicAuth($user, $pass)
+                ->timeout($timeout)
+                ->get("http://{$ip}/rest/ip/firewall/connection", [
+                    'src-address' => $this->ipCliente,
+                ]);
+
+            $conexiones = $connsRes->json();
+            $cerradas = 0;
+            if (is_array($conexiones) && ! empty($conexiones)) {
+                foreach ($conexiones as $conn) {
+                    $id = $conn['.id'] ?? $conn['id'] ?? null;
+                    if ($id) {
+                        $del = Http::withBasicAuth($user, $pass)
+                            ->timeout($timeout)
+                            ->delete("http://{$ip}/rest/ip/firewall/connection/{$id}");
+                        if ($del->successful()) {
+                            $cerradas++;
+                        }
+                    }
+                }
+            }
+
+            Log::info("MikroTik [{$this->router->nombre}]: Servicio suspendido para cliente {$this->folioCliente} (IP: {$this->ipCliente}). Conexiones cerradas: {$cerradas}.");
         } catch (\Throwable $e) {
             Log::error("MikroTik [{$this->router->nombre}]: Excepción al suspender servicio para cliente {$this->folioCliente} (IP: {$this->ipCliente}): {$e->getMessage()}", [
                 'router_id' => $this->router->id,

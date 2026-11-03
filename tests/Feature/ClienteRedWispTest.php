@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Cliente;
 use App\Models\Plan;
+use App\Models\Router;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ClienteRedWispTest extends TestCase
@@ -96,5 +98,63 @@ class ClienteRedWispTest extends TestCase
         $responsePppoe->assertOk();
         $responsePppoe->assertSee('Maria Garcia');
         $responsePppoe->assertDontSee('Juan Perez');
+    }
+
+    public function test_suspender_servicio_cliente_agrega_a_morosos_y_cierra_conexiones(): void
+    {
+        Http::fake([
+            'http://192.168.1.116/rest/ip/firewall/address-list*' => Http::response([], 200),
+            'http://192.168.1.116/rest/ip/firewall/connection*' => Http::response([
+                ['.id' => '*1', 'src-address' => '10.10.10.254'],
+            ], 200),
+            'http://192.168.1.116/rest/ppp/active*' => Http::response([], 200),
+        ]);
+
+        $admin = User::factory()->create(['rol' => 'administrador']);
+        $router = Router::factory()->create([
+            'ip_address' => '192.168.1.116',
+            'api_user' => 'admin',
+            'api_password' => 'admin123',
+            'estado' => 'activo',
+        ]);
+        $cliente = Cliente::factory()->create([
+            'estado' => 'activo',
+            'usuario_pppoe' => '10.10.10.254',
+            'router_id' => $router->id,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.clientes.suspender', $cliente));
+
+        $response->assertSessionHas('success');
+        $cliente->refresh();
+        $this->assertEquals('suspendido', $cliente->estado);
+    }
+
+    public function test_reconectar_servicio_cliente_remueve_de_morosos(): void
+    {
+        Http::fake([
+            'http://192.168.1.116/rest/ip/firewall/address-list*' => Http::response([
+                ['.id' => '*10', 'address' => '10.10.10.254', 'list' => 'morosos'],
+            ], 200),
+        ]);
+
+        $admin = User::factory()->create(['rol' => 'administrador']);
+        $router = Router::factory()->create([
+            'ip_address' => '192.168.1.116',
+            'api_user' => 'admin',
+            'api_password' => 'admin123',
+            'estado' => 'activo',
+        ]);
+        $cliente = Cliente::factory()->create([
+            'estado' => 'suspendido',
+            'usuario_pppoe' => '10.10.10.254',
+            'router_id' => $router->id,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.clientes.reconectar', $cliente));
+
+        $response->assertSessionHas('success');
+        $cliente->refresh();
+        $this->assertEquals('activo', $cliente->estado);
     }
 }

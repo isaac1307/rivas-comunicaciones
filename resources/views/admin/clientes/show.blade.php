@@ -44,6 +44,7 @@
         </div>
     </div>
     <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
             <span class="text-muted small">Estatus y Fecha de Alta</span>
             <div class="mt-1 d-flex align-items-center gap-2">
                 @if ($cliente->estado === 'activo')
@@ -65,21 +66,84 @@
 </div>
 
 <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
-    <div class="row g-3">
-        <div class="col-md-6">
-            <h5 class="fw-bold text-dark mb-2">Dirección de Instalación</h5>
-            <p class="text-dark mb-0"><i class="bi bi-geo-alt text-primary me-1"></i> {{ $cliente->direccion }}</p>
+    <div class="row g-4">
+        <div class="col-md-5">
+            <h5 class="fw-bold text-dark mb-2"><i class="bi bi-geo-alt text-primary me-2"></i>Dirección de Instalación</h5>
+            <p class="text-dark mb-2">{{ $cliente->direccion }}</p>
+            @if ($cliente->coordenadas_gps)
+                <a href="https://www.google.com/maps?q={{ urlencode($cliente->coordenadas_gps) }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-1">
+                    <i class="bi bi-map me-1"></i> Abrir Coordenadas en Google Maps
+                </a>
+            @endif
         </div>
-        <div class="col-md-6">
-            <h5 class="fw-bold text-dark mb-2">Parámetros Técnicos WISP</h5>
-            <div class="small text-muted">
-                <div><strong>Serie ONT / MAC:</strong> {{ $cliente->serie_ont ?: 'No registrada' }}</div>
-                <div><strong>Usuario PPPoE:</strong> {{ $cliente->usuario_pppoe ?: 'No asignado' }}</div>
-                <div><strong>Coordenadas GPS:</strong> {{ $cliente->coordenadas_gps ?: 'No registradas' }}</div>
+        <div class="col-md-7">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-router text-primary me-2"></i>Parámetros Técnicos de Red / MikroTik</h5>
+                <div>
+                    @if ($cliente->isSuspendido())
+                        <form action="{{ route('admin.clientes.reconectar', $cliente) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Confirmas la reactivación del servicio de internet para este cliente en MikroTik?');">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-sm fw-bold shadow-sm">
+                                <i class="bi bi-play-circle me-1"></i> Reconectar Internet
+                            </button>
+                        </form>
+                    @else
+                        <form action="{{ route('admin.clientes.suspender', $cliente) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Confirmas la suspensión inmediata del servicio de internet para este cliente en MikroTik?');">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
+                                <i class="bi bi-pause-circle me-1"></i> Suspender Internet
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+            <div class="row g-2 small">
+                <div class="col-sm-6">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block small">Nodo / Router MikroTik:</span>
+                        @if ($cliente->router)
+                            <span class="fw-bold text-dark"><i class="bi bi-hdd-network text-primary me-1"></i>{{ $cliente->router->nombre }}</span>
+                            <div class="text-muted" style="font-size: 0.75rem;">IP: {{ $cliente->router->ip_address }}</div>
+                        @else
+                            <span class="text-muted fst-italic">Nodo Activo Principal (Automático)</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block small">IP Asignada / PPPoE:</span>
+                        @if ($cliente->ip_asignada)
+                            <span class="fw-bold font-monospace text-primary">{{ $cliente->ip_asignada }}</span>
+                            @if ($cliente->isSuspendido())
+                                <span class="badge bg-danger-subtle text-danger d-inline-block ms-1">En lista morosos</span>
+                            @else
+                                <span class="badge bg-success-subtle text-success d-inline-block ms-1">Tráfico activo</span>
+                            @endif
+                        @else
+                            <span class="text-muted fst-italic">No asignada</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block small">Serie ONT / MAC Módem:</span>
+                        <span class="fw-bold text-dark">{{ $cliente->serie_ont ?: 'No registrada' }}</span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block small">Límites de Velocidad Asignados:</span>
+                        @if ($cliente->plan)
+                            <span class="fw-bold text-dark">{{ $cliente->plan->velocidad_carga }}M Subida / {{ $cliente->plan->velocidad_descarga }}M Bajada</span>
+                        @else
+                            <span class="text-muted fst-italic">Sin plan contratado</span>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
         @if ($cliente->notas)
-            <div class="col-12 mt-3 pt-3 border-top">
+            <div class="col-12 mt-2 pt-3 border-top">
                 <h6 class="fw-bold text-dark mb-1">Notas del Expediente</h6>
                 <p class="text-muted small mb-0">{{ $cliente->notas }}</p>
             </div>

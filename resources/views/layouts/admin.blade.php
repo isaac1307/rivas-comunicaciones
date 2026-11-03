@@ -162,6 +162,13 @@
             @endif
 
             @if (auth()->check() && auth()->user()->isAdmin())
+                <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Red & Infraestructura</li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.routers.*') ? 'active' : '' }}" href="{{ route('admin.routers.index') }}">
+                        <i class="bi bi-hdd-network"></i> Nodos MikroTik
+                    </a>
+                </li>
+
                 <li class="px-4 mt-3 mb-1 text-uppercase text-secondary small fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Seguridad & Administración</li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">

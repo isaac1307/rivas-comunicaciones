@@ -132,6 +132,22 @@
                                         <i class="bi bi-check-circle-fill me-1"></i> Al corriente
                                     </span>
                                 @endif
+
+                                @if ($cli->isSuspendido())
+                                    <div class="mt-1">
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="Cortado en MikroTik por mora">
+                                            <i class="bi bi-slash-circle me-1"></i> Servicio Cortado
+                                        </span>
+                                    </div>
+                                @endif
+
+                                @if ((float) $cli->saldo_a_favor > 0)
+                                    <div class="mt-1">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" title="Saldo disponible a favor">
+                                            <i class="bi bi-wallet2 me-1"></i> A favor: ${{ number_format($cli->saldo_a_favor, 2) }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="text-end">
                                 <a href="{{ route('admin.cobranza.show', $cli) }}" class="btn btn-sm {{ $saldo > 0 ? 'btn-primary' : 'btn-outline-secondary' }}">
