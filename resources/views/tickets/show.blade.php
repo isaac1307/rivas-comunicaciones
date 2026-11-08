@@ -3,104 +3,79 @@
 @section('title', 'Ticket de Soporte ' . $ticket->folio)
 
 @section('content')
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                <div>
-                    <span class="badge bg-info-subtle text-info px-3 py-1 rounded-pill small fw-bold">Atención Técnica</span>
-                    <h2 class="fw-bold mb-0 mt-1">Ticket: <span class="text-primary">{{ $ticket->folio }}</span></h2>
-                </div>
-                <a href="{{ route('tickets.create') }}" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-plus-circle me-1"></i> Reportar Otro Problema
-                </a>
-            </div>
+<section class="rc-page-head">
+    <div class="rc-wrap rc-page-head__grid">
+        <div class="rc-page-head__title">
+            <h1 class="rc-folio-title">{{ $ticket->folio }}</h1>
+        </div>
+        <div class="rc-page-head__desc">
+            <p class="rc-lead">
+                Reporte técnico abierto el {{ $ticket->created_at->format('d/m/Y') }} a las {{ $ticket->created_at->format('H:i') }}&nbsp;horas.
+            </p>
+        </div>
+    </div>
+</section>
 
-            <!-- Estatus del Ticket -->
-            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-                <h5 class="fw-bold mb-3 text-dark">Estatus del Incidente</h5>
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-3 rounded-3 bg-light">
+<section class="rc-section rc-section--bg" style="padding-top: 1rem;">
+    <div class="rc-wrap rc-split">
+        <div class="rc-split__media">
+            <h2>Estatus del incidente</h2>
+            <p style="margin-top: 1rem;">
+                <span class="rc-status-pill rc-status-pill--accent">
+                    {{ ucfirst(str_replace('_', ' ', $ticket->estado)) }}
+                </span>
+            </p>
+            <p class="rc-muted" style="margin-top: 1.25rem;">
+                Nuestro equipo actualiza este expediente conforme avanza la revisión en nodo o la visita en domicilio.
+            </p>
+
+            <div class="rc-no-print" style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem;">
+                <button type="button" class="rc-btn" onclick="window.print()">Imprimir comprobante</button>
+                <a href="{{ route('tickets.create') }}" class="rc-btn rc-btn--gold">Nuevo reporte</a>
+            </div>
+        </div>
+
+        <div class="rc-split__content">
+            <div class="rc-dossier">
+                <h2>Expediente técnico</h2>
+
+                <dl class="rc-dl rc-tabular">
                     <div>
-                        <span class="small text-muted d-block">Estado:</span>
-                        @php
-                            $badgeColors = [
-                                'abierto' => 'bg-danger text-white',
-                                'en_proceso' => 'bg-warning text-dark',
-                                'resuelto' => 'bg-success text-white',
-                                'cerrado' => 'bg-secondary text-white',
-                            ];
-                        @endphp
-                        <span class="badge {{ $badgeColors[$ticket->estado] ?? 'bg-secondary' }} fs-6 px-3 py-2 text-uppercase fw-bold">
-                            {{ str_replace('_', ' ', ucfirst($ticket->estado)) }}
-                        </span>
-                    </div>
-                    <div class="text-end">
-                        <span class="small text-muted d-block">Fecha de Reporte:</span>
-                        <span class="fw-semibold">{{ $ticket->created_at->format('d/m/Y H:i') }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detalle del Ticket -->
-            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
-                <h5 class="fw-bold text-primary mb-4 border-bottom pb-2">Información del Reporte</h5>
-
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <span class="small text-muted d-block">Cliente Titular:</span>
-                        <div class="fw-bold text-dark fs-5">{{ $ticket->cliente->nombre_completo }}</div>
+                        <dt>Titular del contrato</dt>
+                        <dd>{{ $ticket->cliente->nombre_completo }}</dd>
                     </div>
 
-                    <div class="col-md-6">
-                        <span class="small text-muted d-block">Plan Asociado:</span>
-                        <div class="fw-semibold text-primary fs-5">
-                            {{ $ticket->cliente->plan ? $ticket->cliente->plan->nombre : 'Sin plan registrado' }}
-                        </div>
+                    <div>
+                        <dt>Plan asociado</dt>
+                        <dd>{{ $ticket->cliente->plan ? $ticket->cliente->plan->nombre : 'Sin plan registrado' }}</dd>
                     </div>
 
-                    <div class="col-md-6">
-                        <span class="small text-muted d-block">Categoría del Reporte:</span>
-                        <div class="fw-bold text-dark text-capitalize">
-                            <i class="bi bi-tag-fill me-1 text-primary"></i> {{ str_replace('_', ' ', $ticket->categoria) }}
-                        </div>
+                    <div>
+                        <dt>Categoría</dt>
+                        <dd>{{ ucfirst(str_replace('_', ' ', $ticket->categoria)) }}</dd>
                     </div>
 
-                    <div class="col-md-6">
-                        <span class="small text-muted d-block">Fecha de Resolución:</span>
-                        <div class="fw-semibold text-dark">
-                            {{ $ticket->fecha_resolucion ? $ticket->fecha_resolucion->format('d/m/Y H:i') : 'Pendiente de resolución' }}
-                        </div>
+                    <div>
+                        <dt>Fecha de resolución</dt>
+                        <dd>{{ $ticket->fecha_resolucion ? $ticket->fecha_resolucion->format('d/m/Y H:i') : 'En atención por ingeniería' }}</dd>
                     </div>
+                </dl>
 
-                    <div class="col-12">
-                        <span class="small text-muted d-block">Descripción Reportada:</span>
-                        <div class="p-3 bg-light rounded-3 text-dark mt-1">
-                            {{ $ticket->descripcion }}
-                        </div>
-                    </div>
-
-                    @if ($ticket->observaciones_admin)
-                        <div class="col-12">
-                            <span class="small text-muted d-block fw-bold text-success">
-                                <i class="bi bi-chat-quote-fill me-1"></i> Respuesta / Observaciones del Equipo Técnico:
-                            </span>
-                            <div class="p-3 border border-success-subtle bg-success-subtle rounded-3 text-dark mt-1">
-                                {{ $ticket->observaciones_admin }}
-                            </div>
-                        </div>
-                    @endif
+                <div style="margin-top: 1.5rem;">
+                    <p class="rc-small rc-muted" style="margin-bottom: 0.35rem;">Descripción reportada</p>
+                    <p>{{ $ticket->descripcion }}</p>
                 </div>
 
-                <hr class="my-4">
-
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span class="text-muted small">Cualquier seguimiento adicional puedes mencionarlo con el folio {{ $ticket->folio }}.</span>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-                        <i class="bi bi-printer me-1"></i> Imprimir Comprobante
-                    </button>
-                </div>
+                @if ($ticket->observaciones_admin)
+                    <div style="margin-top: 2rem; padding: 1.25rem; background-color: var(--bg);">
+                        <p class="rc-small" style="color: var(--accent); font-weight: 600; margin-bottom: 0.35rem;">
+                            Dictamen del equipo técnico
+                        </p>
+                        <p>{{ $ticket->observaciones_admin }}</p>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
-</div>
+</section>
 @endsection

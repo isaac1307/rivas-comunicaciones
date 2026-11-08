@@ -146,4 +146,26 @@ class PublicPortalTest extends TestCase
         $response->assertSee($ticket->folio);
         $response->assertSee($ticket->cliente->nombre_completo);
     }
+
+    public function test_busqueda_de_folio_reservacion_en_inicio_redirige_a_detalle(): void
+    {
+        $response = $this->get(route('home', ['folio' => ' res-20261108-abcd ']));
+
+        $response->assertRedirect(route('reservaciones.show', 'RES-20261108-ABCD'));
+    }
+
+    public function test_busqueda_de_folio_ticket_en_inicio_redirige_a_detalle(): void
+    {
+        $response = $this->get(route('home', ['folio' => 'tkt-20261108-ef99']));
+
+        $response->assertRedirect(route('tickets.show', 'TKT-20261108-EF99'));
+    }
+
+    public function test_busqueda_de_folio_invalido_en_inicio_regresa_con_mensaje_de_error(): void
+    {
+        $response = $this->get(route('home', ['folio' => 'FOLIO-DESCONOCIDO']));
+
+        $response->assertRedirect(route('home'));
+        $response->assertSessionHas('error', 'Ingresa un folio válido que inicie con RES- o TKT-.');
+    }
 }
