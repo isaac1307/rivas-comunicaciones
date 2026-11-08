@@ -70,6 +70,17 @@
                 @enderror
             </div>
 
+            <div class="col-md-6 d-flex align-items-center">
+                <div class="form-check form-switch mt-3">
+                    <input type="hidden" name="usar_tls" value="0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="usar_tls" name="usar_tls" value="1" {{ old('usar_tls') ? 'checked' : '' }}>
+                    <label class="form-check-label fw-bold small text-dark" for="usar_tls">
+                        <i class="bi bi-lock-fill text-success me-1"></i> Usar HTTPS / TLS (`www-ssl`) para la API REST
+                    </label>
+                    <div class="text-muted small">Actívalo si el router tiene certificado SSL configurado en IP -> Services -> www-ssl.</div>
+                </div>
+            </div>
+
             <div class="col-12 mt-3">
                 <div class="form-check form-switch p-3 bg-light rounded-3 border">
                     <input class="form-check-input ms-0 me-3" type="checkbox" role="switch" id="auto_aprovisionar_planes" name="auto_aprovisionar_planes" value="1" {{ old('auto_aprovisionar_planes', '1') === '1' ? 'checked' : '' }}>

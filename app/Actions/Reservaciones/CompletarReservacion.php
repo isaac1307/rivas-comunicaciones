@@ -2,6 +2,10 @@
 
 namespace App\Actions\Reservaciones;
 
+use App\Enums\EstadoCargo;
+use App\Enums\EstadoCliente;
+use App\Enums\EstadoReservacion;
+use App\Enums\TipoCargo;
 use App\Models\Cargo;
 use App\Models\Cliente;
 use App\Models\Reservacion;
@@ -20,7 +24,7 @@ class CompletarReservacion
         return DB::transaction(function () use ($reservacion, $datos) {
             $reservacion->update($datos);
 
-            if ($reservacion->estado !== 'completada') {
+            if ($reservacion->estado !== EstadoReservacion::Completada->value) {
                 return null;
             }
 
@@ -41,7 +45,7 @@ class CompletarReservacion
 
             if ($cliente) {
                 $cliente->update([
-                    'estado' => 'activo',
+                    'estado' => EstadoCliente::Activo->value,
                     'plan_id' => $reservacion->plan_id ?: $cliente->plan_id,
                     'direccion' => $reservacion->direccion ?: $cliente->direccion,
                 ]);
@@ -53,7 +57,7 @@ class CompletarReservacion
                     'correo_electronico' => $reservacion->correo_electronico,
                     'plan_id' => $reservacion->plan_id,
                     'fecha_alta' => now()->toDateString(),
-                    'estado' => 'activo',
+                    'estado' => EstadoCliente::Activo->value,
                     'notas' => "Alta automática al completar con éxito la instalación (Folio: {$reservacion->folio}).".($reservacion->observaciones ? " Observaciones: {$reservacion->observaciones}" : ''),
                 ]);
             }
@@ -71,7 +75,7 @@ class CompletarReservacion
                 if ($cliente->plan) {
                     $clavePeriodo = now()->format('Y-m');
                     $yaTieneMensualidad = $cliente->cargos()
-                        ->where('tipo', 'mensualidad')
+                        ->where('tipo', TipoCargo::Mensualidad->value)
                         ->where('periodo', $clavePeriodo)
                         ->exists();
 
@@ -85,13 +89,13 @@ class CompletarReservacion
                         Cargo::create([
                             'cliente_id' => $cliente->id,
                             'plan_id' => $cliente->plan_id,
-                            'tipo' => 'mensualidad',
+                            'tipo' => TipoCargo::Mensualidad->value,
                             'periodo' => $clavePeriodo,
                             'concepto' => 'Mensualidad '.$mesEtiqueta.' - '.$cliente->plan->nombre,
                             'monto' => $cliente->plan->precio_mensual,
                             'monto_pagado' => 0,
                             'fecha_vencimiento' => $fechaVencimiento->toDateString(),
-                            'estado' => 'pendiente',
+                            'estado' => EstadoCargo::Pendiente->value,
                         ]);
                     }
                 }

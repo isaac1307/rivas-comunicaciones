@@ -5,7 +5,9 @@ namespace App\Traits;
 use App\Models\Bitacora;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 trait Auditable
 {
@@ -131,8 +133,13 @@ trait Auditable
                 'valores_nuevos' => $valoresNuevos,
                 'ip_origen' => $ip,
             ]);
-        } catch (\Throwable $e) {
-            // Evitar interrumpir la operación principal si falla el log de auditoría
+        } catch (Throwable $e) {
+            Log::critical('Fallo al registrar evento en la bitácora de auditoría.', [
+                'accion' => $accion,
+                'tabla' => $model->getTable(),
+                'registro_id' => $model->getKey(),
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

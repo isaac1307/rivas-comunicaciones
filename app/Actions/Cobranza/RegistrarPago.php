@@ -2,6 +2,8 @@
 
 namespace App\Actions\Cobranza;
 
+use App\Enums\EstadoCliente;
+use App\Enums\EstadoPago;
 use App\Jobs\Red\ReconectarServicioRedJob;
 use App\Models\Cargo;
 use App\Models\Cliente;
@@ -33,17 +35,19 @@ class RegistrarPago
                 ->lockForUpdate()
                 ->get();
 
-            $monto = round((float) $datos['monto'], 2);
-            $saldo = round($cargosPendientes->sum(fn (Cargo $cargo) => $cargo->saldo()), 2);
+            $montoCentavos = (int) round((float) $datos['monto'] * 100);
+            $saldoCentavos = (int) $cargosPendientes->sum(fn (Cargo $cargo) => $cargo->saldoEnCentavos());
+            $monto = round($montoCentavos / 100, 2);
+            $saldo = round($saldoCentavos / 100, 2);
             $permitirSaldoAFavor = (bool) ($datos['permitir_saldo_a_favor'] ?? config('cobranza.permitir_saldo_a_favor', false));
 
-            if ($saldo <= 0 && ! $permitirSaldoAFavor) {
+            if ($saldoCentavos <= 0 && ! $permitirSaldoAFavor) {
                 throw ValidationException::withMessages([
                     'monto' => 'El cliente no tiene saldo pendiente por cobrar.',
                 ]);
             }
 
-            if ($monto > $saldo && ! $permitirSaldoAFavor) {
+            if ($montoCentavos > $saldoCentavos && ! $permitirSaldoAFavor) {
                 throw ValidationException::withMessages([
                     'monto' => 'El monto ($'.number_format($monto, 2).') excede el saldo pendiente del cliente ($'.number_format($saldo, 2).').',
                 ]);
@@ -52,38 +56,49 @@ class RegistrarPago
             $pago = Pago::create([
                 'cliente_id' => $clienteBloqueado->id,
                 'usuario_id' => $cobrador->id,
-                'monto' => $monto,
-                'monto_saldo_favor' => 0.00,
+                'monto' => number_format($montoCentavos / 100, 2, '.', ''),
+                'monto_saldo_favor' => '0.00',
                 'metodo_pago' => $datos['metodo_pago'],
                 'referencia' => $datos['referencia'] ?? null,
                 'fecha_pago' => $datos['fecha_pago'] ?? now(),
                 'notas' => $datos['notas'] ?? null,
-                'estado' => 'aplicado',
+                'estado' => EstadoPago::Aplicado->value,
             ]);
 
-            $restante = $monto;
+            $restanteCentavos = $montoCentavos;
 
             foreach ($cargosPendientes as $cargo) {
-                if ($restante <= 0) {
+                if ($restanteCentavos <= 0) {
                     break;
                 }
 
-                $aplicado = min($restante, $cargo->saldo());
+                $aplicadoCentavos = min($restanteCentavos, $cargo->saldoEnCentavos());
+                $pagadoCargoCentavos = (int) round((float) $cargo->monto_pagado * 100) + $aplicadoCentavos;
 
-                $cargo->monto_pagado = (string) round((float) $cargo->monto_pagado + $aplicado, 2);
+                $cargo->monto_pagado = number_format($pagadoCargoCentavos / 100, 2, '.', '');
                 $cargo->recalcularEstado();
                 $cargo->save();
 
-                $pago->cargos()->attach($cargo->id, ['monto_aplicado' => $aplicado]);
+                $pago->cargos()->attach($cargo->id, [
+                    'monto_aplicado' => number_format($aplicadoCentavos / 100, 2, '.', ''),
+                ]);
 
-                $restante = round($restante - $aplicado, 2);
+                $restanteCentavos -= $aplicadoCentavos;
             }
 
-            if ($restante > 0) {
-                $pago->monto_saldo_favor = (string) $restante;
+            if ($restanteCentavos > 0) {
+                $pago->monto_saldo_favor = number_format($restanteCentavos / 100, 2, '.', '');
                 $pago->save();
 
-                $clienteBloqueado->saldo_a_favor = (string) round((float) $clienteBloqueado->saldo_a_favor + $restante, 2);
+                $saldoFavorActualCentavos = (int) round((float) $clienteBloqueado->saldo_a_favor * 100);
+                $clienteBloqueado->saldo_a_favor = number_format(($saldoFavorActualCentavos + $restanteCentavos) / 100, 2, '.', '');
+                $clienteBloqueado->save();
+            }
+
+            // Si el cliente estaba suspendido y liquidó todos sus cargos vencidos, reactivarlo en BD
+            if ($clienteBloqueado->estado === EstadoCliente::Suspendido->value
+                && ! $clienteBloqueado->cargos()->vencidos()->exists()) {
+                $clienteBloqueado->estado = EstadoCliente::Activo->value;
                 $clienteBloqueado->save();
             }
 
@@ -93,7 +108,7 @@ class RegistrarPago
         $tieneCargosVencidos = $cliente->cargos()->vencidos()->exists();
         if (! $tieneCargosVencidos && ! empty($cliente->ip_asignada)) {
             $cliente->loadMissing('router');
-            $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
+            $router = $cliente->router;
 
             if ($router instanceof Router && $router->isActivo()) {
                 ReconectarServicioRedJob::dispatch($router, $cliente->ip_asignada);

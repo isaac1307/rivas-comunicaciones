@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Red\GenerarScriptMikrotik;
+use App\Actions\Red\MikrotikRestClient;
 use App\Actions\Red\SincronizarPlanesMikrotik;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRouterRequest;
@@ -13,8 +14,8 @@ use App\Models\Router;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Throwable;
 
 class RouterController extends Controller
 {
@@ -112,14 +113,12 @@ class RouterController extends Controller
     /**
      * Realiza una prueba de conectividad y autenticación hacia la REST API de RouterOS.
      */
-    public function testConexion(Router $router): RedirectResponse
+    public function testConexion(Router $router, MikrotikRestClient $client): RedirectResponse
     {
         $timeout = (int) config('mikrotik.timeout', config('services.mikrotik.timeout', 4));
 
         try {
-            $response = Http::withBasicAuth($router->api_user, $router->api_password)
-                ->timeout($timeout)
-                ->get("http://{$router->ip_address}/rest/system/resource");
+            $response = $client->obtenerRecursosSistema($router, $timeout);
 
             if ($response->successful()) {
                 /** @var array<string, mixed> $data */
@@ -139,7 +138,7 @@ class RouterController extends Controller
             };
 
             return back()->with('error', $mensajeError);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return back()->with('error', "No se pudo conectar al router '{$router->nombre}' en {$router->ip_address}: {$e->getMessage()}");
         }
     }

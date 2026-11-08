@@ -17,3 +17,12 @@ Artisan::command('inspire', function () {
 Schedule::command('cobranza:generar-cargos')
     ->monthlyOn(1, '00:10')
     ->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| Red: suspende diariamente a clientes activos con cargos vencidos
+|--------------------------------------------------------------------------
+*/
+Schedule::command('red:suspender-morosos')
+    ->dailyAt('06:00')
+    ->withoutOverlapping();

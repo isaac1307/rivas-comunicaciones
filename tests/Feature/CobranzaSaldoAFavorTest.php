@@ -123,4 +123,39 @@ class CobranzaSaldoAFavorTest extends TestCase
         $this->assertEquals(0.00, (float) $cargo->monto_pagado);
         $this->assertEquals(0.00, (float) $cliente->saldo_a_favor);
     }
+
+    public function test_aritmetica_en_centavos_evita_errores_de_punto_flotante_en_abonos_parciales(): void
+    {
+        $cobrador = User::factory()->create(['rol' => 'cobrador']);
+        $cliente = Cliente::factory()->create(['saldo_a_favor' => 0.00]);
+
+        $cargo = Cargo::factory()->create([
+            'cliente_id' => $cliente->id,
+            'monto' => 19.99,
+            'monto_pagado' => 0.00,
+            'estado' => 'pendiente',
+        ]);
+
+        $registrar = app(RegistrarPago::class);
+
+        $registrar->handle($cliente, [
+            'monto' => 9.99,
+            'metodo_pago' => 'efectivo',
+        ], $cobrador);
+
+        $cargo->refresh();
+        $this->assertEquals(1000, $cargo->saldoEnCentavos());
+        $this->assertEquals(10.00, $cargo->saldo());
+        $this->assertEquals('parcial', $cargo->estado);
+
+        $registrar->handle($cliente, [
+            'monto' => 10.00,
+            'metodo_pago' => 'efectivo',
+        ], $cobrador);
+
+        $cargo->refresh();
+        $this->assertEquals(0, $cargo->saldoEnCentavos());
+        $this->assertEquals(0.00, $cargo->saldo());
+        $this->assertEquals('pagado', $cargo->estado);
+    }
 }

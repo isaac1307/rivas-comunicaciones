@@ -364,4 +364,128 @@ class MikrotikJobsTest extends TestCase
                 && $job->nombreCliente === 'Carlos Hernandez Editado';
         });
     }
+
+    public function test_no_despacha_job_de_otro_router_si_cliente_no_tiene_router_asignado(): void
+    {
+        Queue::fake();
+
+        Router::factory()->create(['estado' => 'activo', 'nombre' => 'Router Ajeno']);
+        $cobrador = User::factory()->create(['rol' => 'cobrador']);
+        $clienteSinRouter = Cliente::factory()->create([
+            'router_id' => null,
+            'usuario_pppoe' => '192.168.10.99',
+            'estado' => 'suspendido',
+            'saldo_a_favor' => 0.00,
+        ]);
+
+        Cargo::factory()->create([
+            'cliente_id' => $clienteSinRouter->id,
+            'monto' => 350.00,
+            'monto_pagado' => 0.00,
+            'fecha_vencimiento' => now()->subDays(5),
+            'estado' => 'pendiente',
+        ]);
+
+        app(RegistrarPago::class)->handle($clienteSinRouter, [
+            'monto' => 350.00,
+            'metodo_pago' => 'efectivo',
+        ], $cobrador);
+
+        $clienteSinRouter->refresh();
+        $this->assertEquals('activo', $clienteSinRouter->estado);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_router_con_usar_tls_utiliza_https_en_mikrotik_rest_client(): void
+    {
+        $router = Router::factory()->create([
+            'nombre' => 'Nodo Seguro TLS',
+            'ip_address' => '10.90.1.1',
+            'api_user' => 'api_tls',
+            'api_password' => 'tls_secret',
+            'usar_tls' => true,
+            'verificar_certificado' => false,
+            'estado' => 'activo',
+        ]);
+
+        $this->assertEquals('https://10.90.1.1/rest', $router->restBaseUrl());
+
+        Http::fake([
+            'https://10.90.1.1/rest/ip/firewall/address-list' => Http::response([
+                '.id' => '*99',
+                'list' => 'morosos',
+                'address' => '10.90.10.50',
+            ], 200),
+            'https://10.90.1.1/rest/ip/firewall/connection*' => Http::response([], 200),
+        ]);
+
+        $job = new SuspenderServicioRedJob($router, '10.90.10.50', 'CLI-TLS');
+        $job->handle();
+
+        Http::assertSent(function (Request $request) {
+            return $request->method() === 'PUT'
+                && $request->url() === 'https://10.90.1.1/rest/ip/firewall/address-list';
+        });
+    }
+
+    public function test_comando_suspender_morosos_suspende_clientes_con_cargos_vencidos_y_despacha_job(): void
+    {
+        Queue::fake();
+
+        $router = Router::factory()->create(['estado' => 'activo']);
+
+        $clienteMoroso = Cliente::factory()->create([
+            'estado' => 'activo',
+            'router_id' => $router->id,
+            'usuario_pppoe' => '10.40.1.10',
+        ]);
+
+        Cargo::factory()->create([
+            'cliente_id' => $clienteMoroso->id,
+            'monto' => 450.00,
+            'monto_pagado' => 0.00,
+            'fecha_vencimiento' => today()->subDays(3),
+            'estado' => 'pendiente',
+        ]);
+
+        $clienteAlCorriente = Cliente::factory()->create([
+            'estado' => 'activo',
+            'router_id' => $router->id,
+            'usuario_pppoe' => '10.40.1.11',
+        ]);
+
+        Cargo::factory()->create([
+            'cliente_id' => $clienteAlCorriente->id,
+            'monto' => 450.00,
+            'monto_pagado' => 0.00,
+            'fecha_vencimiento' => today()->addDays(5),
+            'estado' => 'pendiente',
+        ]);
+
+        $this->artisan('red:suspender-morosos')
+            ->expectsOutputToContain('Se suspendieron 1 cliente(s)')
+            ->assertExitCode(0);
+
+        $clienteMoroso->refresh();
+        $clienteAlCorriente->refresh();
+
+        $this->assertEquals('suspendido', $clienteMoroso->estado);
+        $this->assertEquals('activo', $clienteAlCorriente->estado);
+
+        Queue::assertPushed(SuspenderServicioRedJob::class, function (SuspenderServicioRedJob $job) use ($router, $clienteMoroso) {
+            return $job->router->id === $router->id
+                && $job->ipCliente === '10.40.1.10'
+                && (string) $job->folioCliente === (string) $clienteMoroso->id;
+        });
+    }
+
+    public function test_jobs_de_mikrotik_configuran_politica_de_reintentos_y_unicidad(): void
+    {
+        $router = Router::factory()->create(['id' => 7]);
+        $job = new SuspenderServicioRedJob($router, '10.10.1.5', '12');
+
+        $this->assertEquals(5, $job->tries);
+        $this->assertEquals([10, 30, 60, 300], $job->backoff());
+        $this->assertEquals('mikrotik-suspender-7-10.10.1.5', $job->uniqueId());
+    }
 }

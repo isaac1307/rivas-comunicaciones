@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoCargo;
+use App\Enums\EstadoCliente;
 use App\Traits\Auditable;
 use Database\Factories\ClienteFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -161,7 +163,7 @@ class Cliente extends Model
      */
     public function scopeActivo(Builder $query): Builder
     {
-        return $query->where('estado', 'activo');
+        return $query->where('estado', EstadoCliente::Activo->value);
     }
 
     /**
@@ -173,8 +175,8 @@ class Cliente extends Model
     public function scopeConSaldo(Builder $query): Builder
     {
         return $query
-            ->withSum(['cargos as total_cargos' => fn (Builder $q) => $q->where('estado', '!=', 'cancelado')], 'monto')
-            ->withSum(['cargos as total_pagado' => fn (Builder $q) => $q->where('estado', '!=', 'cancelado')], 'monto_pagado')
+            ->withSum(['cargos as total_cargos' => fn (Builder $q) => $q->where('estado', '!=', EstadoCargo::Cancelado->value)], 'monto')
+            ->withSum(['cargos as total_pagado' => fn (Builder $q) => $q->where('estado', '!=', EstadoCargo::Cancelado->value)], 'monto_pagado')
             ->withCount(['cargos as cargos_vencidos_count' => fn (Builder $q) => $q->whereIn('estado', Cargo::ESTADOS_PENDIENTES)->whereDate('fecha_vencimiento', '<', today())]);
     }
 
@@ -208,7 +210,7 @@ class Cliente extends Model
      */
     public function scopeSuspendido(Builder $query): Builder
     {
-        return $query->where('estado', 'suspendido');
+        return $query->where('estado', EstadoCliente::Suspendido->value);
     }
 
     /**
@@ -233,7 +235,7 @@ class Cliente extends Model
      */
     public function isSuspendido(): bool
     {
-        return $this->estado === 'suspendido';
+        return $this->estado === EstadoCliente::Suspendido->value;
     }
 
     /**

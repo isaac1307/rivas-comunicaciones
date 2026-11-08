@@ -30,7 +30,7 @@ Este documento es la **fuente de verdad técnica y funcional absoluta** del sist
 | **Diseño y Tipografía** | **Plus Jakarta Sans + Design Tokens** | Paleta personalizada en variables CSS (`--rc-primary`, `--rc-accent`, `--rc-dark`, `--rc-dark-surface`). |
 | **Motor de Animaciones** | **Motion Partial (`motion.blade.php`)** | Curvas cúbicas (`--ease-out`, `--ease-drawer`), microinteracciones activas (`scale(0.97)`), `@starting-style` y soporte para `prefers-reduced-motion`. |
 | **Herramientas de Calidad** | **Laravel Pint 1.32 + Larastan 3.13** | Reglas de estilo oficiales de Laravel y análisis estático estricto. |
-| **Suite de Pruebas** | **PHPUnit 12.5** | **100 pruebas** (98 exitosas, 2 omitidas, **324 aserciones**) que validan todos los flujos críticos sin regresiones. |
+| **Suite de Pruebas** | **PHPUnit 12.5** | **119 pruebas** (117 exitosas, 2 omitidas, **388+ aserciones**) que validan todos los flujos críticos sin regresiones. |
 
 ---
 
@@ -42,15 +42,22 @@ El sistema sigue una arquitectura por capas limpia que evita controladores obeso
 app/
 ├── Actions/                  # Lógica de negocio transaccional y casos de uso complejos
 │   ├── Cobranza/
-│   │   ├── GenerarCargosMensuales.php  # Facturación masiva periódica idempotente + descuento de saldo a favor
-│   │   ├── RegistrarPago.php           # Registro transaccional FIFO + saldo a favor + reconexión MikroTik
+│   │   ├── GenerarCargosMensuales.php  # Facturación masiva periódica idempotente + descuento de saldo a favor en centavos
+│   │   ├── RegistrarPago.php           # Registro transaccional FIFO en centavos + saldo a favor + reconexión MikroTik
 │   │   └── AnularPago.php              # Reversión determinista de saldos + suspensión MikroTik si queda moroso
 │   ├── Fortify/                        # Acciones de registro y reseteo de contraseñas
+│   ├── Red/
+│   │   ├── MikrotikRestClient.php          # Cliente HTTP centralizado (HTTP/HTTPS TLS) para RouterOS v7 REST API
+│   │   ├── GestionarEstadoServicioCliente.php # Corte y reconexión inmediata de servicio de cliente
+│   │   ├── SuspenderClientesMorosos.php    # Corte automatizado en lote para clientes con cargos vencidos
+│   │   ├── SincronizarPlanesMikrotik.php   # Aprovisionamiento de perfiles PPP, PCQ, colas y firewall
+│   │   └── GenerarScriptMikrotik.php       # Generador de script .rsc para terminal de RouterOS
 │   └── Reservaciones/
 │       └── CompletarReservacion.php    # Conversión automática de prospecto a cliente + primer cargo mensual
 ├── Console/
 │   └── Commands/
-│       └── GenerarCargosMensualesCommand.php # Comando Artisan cobranza:generar-cargos
+│       ├── GenerarCargosMensualesCommand.php   # Comando Artisan cobranza:generar-cargos
+│       └── SuspenderClientesMorososCommand.php # Comando Artisan red:suspender-morosos
 ├── Enums/                    # Backed Enums de PHP 8.5 para estados, tipos y roles
 │   ├── RolUsuario.php        # Administrador, Operador, Cobrador
 │   ├── EstadoCliente.php     # Activo, Suspendido, Inactivo
@@ -106,11 +113,11 @@ Todos los modelos principales (`Cliente`, `Plan`, `Promocion`, `Reservacion`, `T
 * Encapsula los logs en un bloque `try/catch` para que un fallo en auditoría jamás interrumpa la operación principal.
 
 ### 3.4. Jobs Asíncronos para Automatización MikroTik (`app/Jobs/Red/`)
-Toda comunicación con los enrutadores MikroTik se realiza fuera de las transacciones SQL mediante colas (`ShouldQueue`) y `Http::withBasicAuth($user, $pass)->timeout($timeout)`:
-* **Resolución de Router Multi-Nodo:** Se utiliza el router asignado al cliente (`$cliente->router`) o, en su defecto, el primer router con estado `'activo'` (`Router::query()->where('estado', 'activo')->first()`).
-* **`AsignarPlanRedJob`:** Despachado desde `Admin\ClienteController` al crear (`store`) o actualizar (`update`) un cliente con `plan_id` e `ip_asignada`. Calcula el límite `"{velocidad_carga}M/{velocidad_descarga}M"`, consulta `GET http://{ip}/rest/queue/simple?target={ipCliente}` y ejecuta `PATCH /rest/queue/simple/{.id}` si ya existe la cola o `PUT /rest/queue/simple` si es nueva.
-* **`SuspenderServicioRedJob`:** Ejecuta `PUT http://{ip}/rest/ip/firewall/address-list` agregando la IP del cliente a la lista `'morosos'` con comentario `"Suspendido por sistema - Cliente: {folioCliente}"`.
-* **`ReconectarServicioRedJob`:** Consulta `GET http://{ip}/rest/ip/firewall/address-list?list=morosos&address={ipCliente}` para localizar el `.id` del registro y ejecuta `DELETE http://{ip}/rest/ip/firewall/address-list/{.id}`.
+Toda comunicación con los enrutadores MikroTik se realiza fuera de las transacciones SQL mediante colas (`ShouldQueue`, `ShouldBeUnique`) y el cliente centralizado `App\Actions\Red\MikrotikRestClient` (con soporte HTTP y HTTPS TLS, política de 5 reintentos y `backoff` exponencial `[10, 30, 60, 300]`):
+* **Resolución Estricta de Router Multi-Nodo:** Solo se despachan comandos de red hacia el router asignado explícitamente al cliente (`$cliente->router`), evitando tocar nodos ajenos si un cliente aún no tiene router asignado.
+* **`AsignarPlanRedJob`:** Despachado desde `Admin\ClienteController` al crear (`store`) o actualizar (`update`) un cliente con `plan_id`, `router_id` e `ip_asignada`. Calcula el límite `"{velocidad_carga}M/{velocidad_descarga}M"`, consulta `/rest/queue/simple?target={ipCliente}` y ejecuta `PATCH /rest/queue/simple/{.id}` si ya existe la cola o `PUT /rest/queue/simple` si es nueva.
+* **`SuspenderServicioRedJob`:** Ejecuta `PUT /rest/ip/firewall/address-list` agregando la IP del cliente a la lista `'morosos'` y cierra sus conexiones activas en `/rest/ip/firewall/connection`. Se despacha automáticamente desde el comando diario `red:suspender-morosos` o al anular un pago que deja cargos vencidos.
+* **`ReconectarServicioRedJob`:** Consulta `GET /rest/ip/firewall/address-list?list=morosos&address={ipCliente}` para localizar el `.id` del registro y ejecuta `DELETE /rest/ip/firewall/address-list/{.id}`.
 
 ---
 
@@ -458,6 +465,9 @@ php artisan cobranza:generar-cargos
 
 # Facturación manual de un periodo específico (ej. mayo 2026):
 php artisan cobranza:generar-cargos --periodo=2026-05
+
+# Suspensión automática de clientes activos con cargos vencidos:
+php artisan red:suspender-morosos --dias-gracia=0
 ```
 
 ### 9.3. Programación Automática (`routes/console.php`)
@@ -467,6 +477,11 @@ use Illuminate\Support\Facades\Schedule;
 // Emite automáticamente los cargos de mensualidad el día 1 de cada mes a las 00:10 hrs:
 Schedule::command('cobranza:generar-cargos')
     ->monthlyOn(1, '00:10')
+    ->withoutOverlapping();
+
+// Suspende diariamente a las 06:00 hrs a clientes activos con cargos vencidos:
+Schedule::command('red:suspender-morosos')
+    ->dailyAt('06:00')
     ->withoutOverlapping();
 ```
 *En el servidor de producción, se debe mantener activo el cron del sistema llamando a `* * * * * cd /ruta/al/proyecto && php artisan schedule:run >> /dev/null 2>&1` y un worker de colas (`php artisan queue:work`) para procesar los Jobs de MikroTik.*

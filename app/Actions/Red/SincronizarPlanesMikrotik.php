@@ -5,11 +5,15 @@ namespace App\Actions\Red;
 use App\Models\Plan;
 use App\Models\Router;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SincronizarPlanesMikrotik
 {
+    public function __construct(
+        protected MikrotikRestClient $client = new MikrotikRestClient
+    ) {}
+
     /**
      * Sincroniza y aprovisiona los planes de velocidad y reglas de corte en el router MikroTik vía REST API.
      *
@@ -24,10 +28,6 @@ class SincronizarPlanesMikrotik
     public function handle(Router $router, ?Collection $planes = null): array
     {
         $planes = $planes ?? Plan::activo()->orderBy('velocidad_descarga', 'asc')->get();
-        $ip = $router->ip_address;
-        $user = $router->api_user;
-        $pass = $router->api_password;
-        $timeout = (int) config('mikrotik.timeout', config('services.mikrotik.timeout', 5));
 
         $detalles = [
             'ppp_profiles' => 0,
@@ -39,9 +39,7 @@ class SincronizarPlanesMikrotik
 
         try {
             // Paso 0: Verificación de estado del router
-            $ping = Http::withBasicAuth($user, $pass)
-                ->timeout($timeout)
-                ->get("http://{$ip}/rest/system/resource");
+            $ping = $this->client->obtenerRecursosSistema($router);
 
             if (! $ping->successful()) {
                 $status = $ping->status();
@@ -60,14 +58,14 @@ class SincronizarPlanesMikrotik
             }
 
             // Paso 1: Aprovisionar Reglas de Firewall para corte de morosos
-            $this->aprovisionarReglaFirewall($ip, $user, $pass, $timeout, [
+            $this->aprovisionarReglaFirewall($router, [
                 'chain' => 'forward',
                 'action' => 'drop',
                 'src-address-list' => 'morosos',
                 'comment' => 'ISP Rivas - Bloqueo Morosos (Subida)',
             ], $detalles, $errores);
 
-            $this->aprovisionarReglaFirewall($ip, $user, $pass, $timeout, [
+            $this->aprovisionarReglaFirewall($router, [
                 'chain' => 'forward',
                 'action' => 'drop',
                 'dst-address-list' => 'morosos',
@@ -80,16 +78,15 @@ class SincronizarPlanesMikrotik
                 $comentario = "ISP Rivas - Plan ID #{$plan->id} ({$plan->nombre})";
 
                 // A) PPP Profile
-                $this->aprovisionarPppProfile($ip, $user, $pass, $timeout, $plan, $rateLimit, $comentario, $detalles, $errores);
+                $this->aprovisionarPppProfile($router, $plan, $rateLimit, $comentario, $detalles, $errores);
 
                 // B) Queue Types (PCQ)
-                $this->aprovisionarQueueTypes($ip, $user, $pass, $timeout, $plan, $detalles, $errores);
+                $this->aprovisionarQueueTypes($router, $plan, $detalles, $errores);
 
                 // C) Simple Queue Template (Plantilla de Plan)
-                $this->aprovisionarSimpleQueueTemplate($ip, $user, $pass, $timeout, $plan, $rateLimit, $comentario, $detalles, $errores);
+                $this->aprovisionarSimpleQueueTemplate($router, $plan, $rateLimit, $comentario, $detalles, $errores);
             }
 
-            $totalConfigurados = $detalles['ppp_profiles'] + $detalles['queue_types'] + $detalles['queue_simples'];
             $mensaje = "¡Aprovisionamiento completado con éxito en '{$router->nombre}'! Se configuraron {$detalles['ppp_profiles']} perfiles PPP, {$detalles['queue_types']} tipos PCQ, {$detalles['queue_simples']} plantillas de cola y {$detalles['firewall_rules']} reglas de corte.";
 
             Log::info("MikroTik [{$router->nombre}]: Planes sincronizados exitosamente.", [
@@ -104,7 +101,7 @@ class SincronizarPlanesMikrotik
                 'detalles' => $detalles,
                 'errores' => $errores,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("MikroTik [{$router->nombre}]: Excepción durante la sincronización de planes: {$e->getMessage()}", [
                 'router_id' => $router->id,
                 'exception' => $e->getMessage(),
@@ -112,7 +109,7 @@ class SincronizarPlanesMikrotik
 
             return [
                 'success' => false,
-                'mensaje' => "Fallo de conexión con el nodo '{$router->nombre}' ({$ip}): {$e->getMessage()}",
+                'mensaje' => "Fallo de conexión con el nodo '{$router->nombre}' ({$router->ip_address}): {$e->getMessage()}",
                 'detalles' => $detalles,
                 'errores' => [$e->getMessage()],
             ];
@@ -124,20 +121,16 @@ class SincronizarPlanesMikrotik
      * @param  array<string, int>  $detalles
      * @param  list<string>  $errores
      */
-    protected function aprovisionarReglaFirewall(string $ip, string $user, string $pass, int $timeout, array $datos, array &$detalles, array &$errores): void
+    protected function aprovisionarReglaFirewall(Router $router, array $datos, array &$detalles, array &$errores): void
     {
         try {
-            $check = Http::withBasicAuth($user, $pass)
-                ->timeout($timeout)
-                ->get("http://{$ip}/rest/ip/firewall/filter", [
-                    'comment' => $datos['comment'],
-                ]);
+            $check = $this->client->request($router)->get('/ip/firewall/filter', [
+                'comment' => $datos['comment'],
+            ]);
 
             $reglas = $check->json();
             if (! is_array($reglas) || empty($reglas)) {
-                $create = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->put("http://{$ip}/rest/ip/firewall/filter", $datos);
+                $create = $this->client->request($router)->put('/ip/firewall/filter', $datos);
 
                 if ($create->successful()) {
                     $detalles['firewall_rules']++;
@@ -147,7 +140,7 @@ class SincronizarPlanesMikrotik
             } else {
                 $detalles['firewall_rules']++;
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errores[] = "Excepción en regla firewall '{$datos['comment']}': {$e->getMessage()}";
         }
     }
@@ -156,26 +149,22 @@ class SincronizarPlanesMikrotik
      * @param  array<string, int>  $detalles
      * @param  list<string>  $errores
      */
-    protected function aprovisionarPppProfile(string $ip, string $user, string $pass, int $timeout, Plan $plan, string $rateLimit, string $comentario, array &$detalles, array &$errores): void
+    protected function aprovisionarPppProfile(Router $router, Plan $plan, string $rateLimit, string $comentario, array &$detalles, array &$errores): void
     {
         try {
-            $check = Http::withBasicAuth($user, $pass)
-                ->timeout($timeout)
-                ->get("http://{$ip}/rest/ppp/profile", [
-                    'name' => $plan->nombre,
-                ]);
+            $check = $this->client->request($router)->get('/ppp/profile', [
+                'name' => $plan->nombre,
+            ]);
 
             $profiles = $check->json();
             $existente = (is_array($profiles) && ! empty($profiles)) ? $profiles[0] : null;
             $id = is_array($existente) ? ($existente['.id'] ?? $existente['id'] ?? null) : null;
 
-            if (! empty($id)) {
-                $patch = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->patch("http://{$ip}/rest/ppp/profile/{$id}", [
-                        'rate-limit' => $rateLimit,
-                        'comment' => $comentario,
-                    ]);
+            if (is_string($id) && $id !== '') {
+                $patch = $this->client->request($router)->patch("/ppp/profile/{$id}", [
+                    'rate-limit' => $rateLimit,
+                    'comment' => $comentario,
+                ]);
 
                 if ($patch->successful()) {
                     $detalles['ppp_profiles']++;
@@ -183,13 +172,11 @@ class SincronizarPlanesMikrotik
                     $errores[] = "Error al actualizar PPP Profile '{$plan->nombre}': {$patch->body()}";
                 }
             } else {
-                $put = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->put("http://{$ip}/rest/ppp/profile", [
-                        'name' => $plan->nombre,
-                        'rate-limit' => $rateLimit,
-                        'comment' => $comentario,
-                    ]);
+                $put = $this->client->request($router)->put('/ppp/profile', [
+                    'name' => $plan->nombre,
+                    'rate-limit' => $rateLimit,
+                    'comment' => $comentario,
+                ]);
 
                 if ($put->successful()) {
                     $detalles['ppp_profiles']++;
@@ -197,7 +184,7 @@ class SincronizarPlanesMikrotik
                     $errores[] = "Error al crear PPP Profile '{$plan->nombre}': {$put->body()}";
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errores[] = "Excepción en PPP Profile '{$plan->nombre}': {$e->getMessage()}";
         }
     }
@@ -206,13 +193,13 @@ class SincronizarPlanesMikrotik
      * @param  array<string, int>  $detalles
      * @param  list<string>  $errores
      */
-    protected function aprovisionarQueueTypes(string $ip, string $user, string $pass, int $timeout, Plan $plan, array &$detalles, array &$errores): void
+    protected function aprovisionarQueueTypes(Router $router, Plan $plan, array &$detalles, array &$errores): void
     {
         $downName = "PCQ_DOWN_{$plan->velocidad_descarga}M";
         $upName = "PCQ_UP_{$plan->velocidad_carga}M";
 
         // Downloader
-        $this->asegurarQueueType($ip, $user, $pass, $timeout, [
+        $this->asegurarQueueType($router, [
             'name' => $downName,
             'kind' => 'pcq',
             'pcq-rate' => "{$plan->velocidad_descarga}M",
@@ -220,7 +207,7 @@ class SincronizarPlanesMikrotik
         ], $detalles, $errores);
 
         // Uploader
-        $this->asegurarQueueType($ip, $user, $pass, $timeout, [
+        $this->asegurarQueueType($router, [
             'name' => $upName,
             'kind' => 'pcq',
             'pcq-rate' => "{$plan->velocidad_carga}M",
@@ -233,23 +220,19 @@ class SincronizarPlanesMikrotik
      * @param  array<string, int>  $detalles
      * @param  list<string>  $errores
      */
-    protected function asegurarQueueType(string $ip, string $user, string $pass, int $timeout, array $datos, array &$detalles, array &$errores): void
+    protected function asegurarQueueType(Router $router, array $datos, array &$detalles, array &$errores): void
     {
         try {
-            $check = Http::withBasicAuth($user, $pass)
-                ->timeout($timeout)
-                ->get("http://{$ip}/rest/queue/type", [
-                    'name' => $datos['name'],
-                ]);
+            $check = $this->client->request($router)->get('/queue/type', [
+                'name' => $datos['name'],
+            ]);
 
             $types = $check->json();
             $existente = (is_array($types) && ! empty($types)) ? $types[0] : null;
             $id = is_array($existente) ? ($existente['.id'] ?? $existente['id'] ?? null) : null;
 
-            if (empty($id)) {
-                $put = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->put("http://{$ip}/rest/queue/type", $datos);
+            if (! is_string($id) || $id === '') {
+                $put = $this->client->request($router)->put('/queue/type', $datos);
 
                 if ($put->successful()) {
                     $detalles['queue_types']++;
@@ -259,7 +242,7 @@ class SincronizarPlanesMikrotik
             } else {
                 $detalles['queue_types']++;
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errores[] = "Excepción en Queue Type '{$datos['name']}': {$e->getMessage()}";
         }
     }
@@ -268,28 +251,24 @@ class SincronizarPlanesMikrotik
      * @param  array<string, int>  $detalles
      * @param  list<string>  $errores
      */
-    protected function aprovisionarSimpleQueueTemplate(string $ip, string $user, string $pass, int $timeout, Plan $plan, string $rateLimit, string $comentario, array &$detalles, array &$errores): void
+    protected function aprovisionarSimpleQueueTemplate(Router $router, Plan $plan, string $rateLimit, string $comentario, array &$detalles, array &$errores): void
     {
         $queueName = "PLANTILLA-PLAN-{$plan->id}";
 
         try {
-            $check = Http::withBasicAuth($user, $pass)
-                ->timeout($timeout)
-                ->get("http://{$ip}/rest/queue/simple", [
-                    'name' => $queueName,
-                ]);
+            $check = $this->client->request($router)->get('/queue/simple', [
+                'name' => $queueName,
+            ]);
 
             $queues = $check->json();
             $existente = (is_array($queues) && ! empty($queues)) ? $queues[0] : null;
             $id = is_array($existente) ? ($existente['.id'] ?? $existente['id'] ?? null) : null;
 
-            if (! empty($id)) {
-                $patch = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->patch("http://{$ip}/rest/queue/simple/{$id}", [
-                        'max-limit' => $rateLimit,
-                        'comment' => "Plantilla {$plan->nombre} ({$rateLimit})",
-                    ]);
+            if (is_string($id) && $id !== '') {
+                $patch = $this->client->actualizarSimpleQueue($router, $id, [
+                    'max-limit' => $rateLimit,
+                    'comment' => "Plantilla {$plan->nombre} ({$rateLimit})",
+                ]);
 
                 if ($patch->successful()) {
                     $detalles['queue_simples']++;
@@ -297,13 +276,11 @@ class SincronizarPlanesMikrotik
                     $errores[] = "Error al actualizar Cola Plantilla '{$queueName}': {$patch->body()}";
                 }
             } else {
-                $put = Http::withBasicAuth($user, $pass)
-                    ->timeout($timeout)
-                    ->put("http://{$ip}/rest/queue/simple", [
-                        'name' => $queueName,
-                        'max-limit' => $rateLimit,
-                        'comment' => "Plantilla {$plan->nombre} ({$rateLimit})",
-                    ]);
+                $put = $this->client->crearSimpleQueue($router, [
+                    'name' => $queueName,
+                    'max-limit' => $rateLimit,
+                    'comment' => "Plantilla {$plan->nombre} ({$rateLimit})",
+                ]);
 
                 if ($put->successful()) {
                     $detalles['queue_simples']++;
@@ -311,7 +288,7 @@ class SincronizarPlanesMikrotik
                     $errores[] = "Error al crear Cola Plantilla '{$queueName}': {$put->body()}";
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errores[] = "Excepción en Cola Plantilla '{$queueName}': {$e->getMessage()}";
         }
     }

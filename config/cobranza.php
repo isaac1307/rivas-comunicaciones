@@ -35,4 +35,11 @@ return [
     */
     'generar_cargo_al_completar_reservacion' => (bool) env('COBRANZA_CARGO_AL_COMPLETAR_RESERVACION', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Días de gracia tras el vencimiento antes de corte automático
+    |--------------------------------------------------------------------------
+    */
+    'dias_gracia' => (int) env('COBRANZA_DIAS_GRACIA', 0),
+
 ];

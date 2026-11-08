@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\TipoCargo;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ class StoreCargoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo' => ['required', Rule::in(['mensualidad', 'instalacion', 'reconexion', 'otro'])],
+            'tipo' => ['required', Rule::enum(TipoCargo::class)],
             'periodo' => ['required', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
             'concepto' => ['required', 'string', 'max:200'],
             'monto' => ['required', 'numeric', 'min:0.01'],

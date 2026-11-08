@@ -22,6 +22,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (app()->isProduction()) {
+            $this->command->warn('DatabaseSeeder omitido en entorno de producción para no crear cuentas ni datos de demostración.');
+
+            return;
+        }
+
         // 1. Usuarios del Sistema (Admin y Operador)
         $admin = User::firstOrCreate(
             ['nombre_usuario' => 'admin'],

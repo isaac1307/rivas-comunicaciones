@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\EstadoCliente;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateClienteRequest extends FormRequest
 {
@@ -25,7 +27,7 @@ class UpdateClienteRequest extends FormRequest
             'plan_id' => ['nullable', 'exists:planes,id'],
             'router_id' => ['nullable', 'exists:routers,id'],
             'fecha_alta' => ['required', 'date'],
-            'estado' => ['required', 'in:activo,suspendido,inactivo'],
+            'estado' => ['required', Rule::enum(EstadoCliente::class)],
             'notas' => ['nullable', 'string', 'max:1000'],
             'serie_ont' => ['nullable', 'string', 'max:100'],
             'usuario_pppoe' => ['nullable', 'string', 'max:100'],

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Observers\PagoObserver;
 use App\Traits\Auditable;
 use Database\Factories\PagoFactory;
@@ -124,7 +126,7 @@ class Pago extends Model
      */
     public function metodoEtiqueta(): string
     {
-        return self::METODOS[$this->metodo_pago] ?? ucfirst($this->metodo_pago);
+        return MetodoPago::tryFrom($this->metodo_pago)?->label() ?? (self::METODOS[$this->metodo_pago] ?? ucfirst($this->metodo_pago));
     }
 
     /**
@@ -132,7 +134,7 @@ class Pago extends Model
      */
     public function estaAnulado(): bool
     {
-        return $this->estado === 'anulado';
+        return $this->estado === EstadoPago::Anulado->value;
     }
 
     /**
@@ -143,6 +145,6 @@ class Pago extends Model
      */
     public function scopeAplicados(Builder $query): Builder
     {
-        return $query->where('estado', 'aplicado');
+        return $query->where('estado', EstadoPago::Aplicado->value);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Pago;
+use App\Enums\MetodoPago;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +26,7 @@ class StorePagoRequest extends FormRequest
     {
         return [
             'monto' => ['required', 'numeric', 'min:0.01'],
-            'metodo_pago' => ['required', Rule::in(array_keys(Pago::METODOS))],
+            'metodo_pago' => ['required', Rule::enum(MetodoPago::class)],
             'referencia' => ['nullable', 'string', 'max:100'],
             'fecha_pago' => ['nullable', 'date'],
             'notas' => ['nullable', 'string', 'max:1000'],

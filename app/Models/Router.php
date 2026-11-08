@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Crypt;
  * @property string $ip_address
  * @property string $api_user
  * @property string $api_password
+ * @property bool $usar_tls
+ * @property bool $verificar_certificado
  * @property string $estado
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -45,8 +47,23 @@ class Router extends Model
         'ip_address',
         'api_user',
         'api_password',
+        'usar_tls',
+        'verificar_certificado',
         'estado',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'usar_tls' => 'boolean',
+            'verificar_certificado' => 'boolean',
+        ];
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -102,5 +119,15 @@ class Router extends Model
     public function isActivo(): bool
     {
         return $this->estado === 'activo';
+    }
+
+    /**
+     * Devuelve la URL base del API REST de RouterOS (http o https según usar_tls).
+     */
+    public function restBaseUrl(): string
+    {
+        $scheme = $this->usar_tls ? 'https' : 'http';
+
+        return "{$scheme}://{$this->ip_address}/rest";
     }
 }

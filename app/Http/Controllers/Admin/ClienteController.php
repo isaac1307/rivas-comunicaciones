@@ -67,7 +67,7 @@ class ClienteController extends Controller
 
         if ($cliente->plan_id && ! empty($cliente->ip_asignada)) {
             $cliente->loadMissing(['router', 'plan']);
-            $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
+            $router = $cliente->router;
 
             if ($router instanceof Router && $router->isActivo() && $cliente->plan) {
                 AsignarPlanRedJob::dispatch(
@@ -135,7 +135,7 @@ class ClienteController extends Controller
             $mensajeExito = "Cliente reactivado exitosamente. {$resultado['mensaje']}";
         } elseif ($cliente->estado === 'activo' && $cliente->plan_id && ! empty($cliente->ip_asignada)) {
             $cliente->loadMissing(['router', 'plan']);
-            $router = $cliente->router ?? Router::query()->where('estado', 'activo')->first();
+            $router = $cliente->router;
 
             if ($router instanceof Router && $router->isActivo() && $cliente->plan) {
                 AsignarPlanRedJob::dispatch(

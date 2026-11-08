@@ -118,9 +118,9 @@ El sistema se integra con routers **MikroTik RouterOS v7** mediante su **API RES
 2. **Control de Ancho de Banda (`App\Jobs\Red\AsignarPlanRedJob`):**
    * **Cuándo se dispara:** Automáticamente al crear (`ClienteController@store`) o actualizar (`ClienteController@update`) un cliente que tenga `plan_id` e `ip_asignada` (`usuario_pppoe`).
    * **Qué hace en MikroTik:** Calcula el límite `velocidad_cargaM/velocidad_descargaM` (ej. `15M/50M`). Consulta `GET /rest/queue/simple?target={ip}`; si el cliente ya tiene una Simple Queue, actualiza su velocidad con `PATCH /rest/queue/simple/{.id}`, y si no existe, la crea con `PUT /rest/queue/simple`.
-3. **Suspensión Automática por Morosidad (`App\Jobs\Red\SuspenderServicioRedJob`):**
-   * **Cuándo se dispara:** Al anular un pago (`AnularPago`) si como consecuencia el cliente vuelve a tener cargos vencidos pendientes, o cuando se invoca para cortar el servicio de un cliente moroso.
-   * **Qué hace en MikroTik:** Envía una petición `PUT /rest/ip/firewall/address-list` agregando la IP del cliente a la lista `morosos` con el comentario `"Suspendido por sistema - Cliente: {id}"`.
+3. **Suspensión Automática por Morosidad (`App\Jobs\Red\SuspenderServicioRedJob` y comando `red:suspender-morosos`):**
+   * **Cuándo se dispara:** Diariamente a las `06:00` mediante el Scheduler (`php artisan red:suspender-morosos`), al anular un pago (`AnularPago`) si como consecuencia el cliente vuelve a tener cargos vencidos pendientes, o manualmente desde el expediente del cliente.
+   * **Qué hace en MikroTik:** Envía una petición `PUT /rest/ip/firewall/address-list` (vía `MikrotikRestClient`, con soporte HTTP/HTTPS y política de reintentos) agregando la IP del cliente a la lista `morosos` y cerrando sus conexiones activas para que el corte sea inmediato.
 4. **Reconexión Automática al Pagar (`App\Jobs\Red\ReconectarServicioRedJob`):**
    * **Cuándo se dispara:** Automáticamente en `RegistrarPago` cuando, tras aplicar el pago recibido, el cliente ya no tiene ningún cargo vencido pendiente (`! $cliente->cargos()->vencidos()->exists()`).
    * **Qué hace en MikroTik:** Consulta `GET /rest/ip/firewall/address-list?list=morosos&address={ip}` para obtener el identificador interno `.id` en RouterOS y ejecuta `DELETE /rest/ip/firewall/address-list/{.id}`, restableciendo la navegación del cliente al instante.

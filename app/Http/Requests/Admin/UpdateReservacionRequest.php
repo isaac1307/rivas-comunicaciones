@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\EstadoReservacion;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateReservacionRequest extends FormRequest
 {
@@ -18,7 +20,7 @@ class UpdateReservacionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'estado' => ['required', 'in:pendiente,programada,completada,cancelada'],
+            'estado' => ['required', Rule::enum(EstadoReservacion::class)],
             'fecha_solicitada' => ['nullable', 'date'],
             'plan_id' => ['nullable', 'exists:planes,id'],
             'observaciones' => ['nullable', 'string', 'max:1500'],

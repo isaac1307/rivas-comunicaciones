@@ -3,32 +3,19 @@
 namespace App\Observers;
 
 use App\Models\Ticket;
-use Illuminate\Support\Str;
+use App\Traits\GeneraFolioUnico;
 
 class TicketObserver
 {
+    use GeneraFolioUnico;
+
     /**
      * Handle the Ticket "creating" event.
      */
     public function creating(Ticket $ticket): void
     {
         if (empty($ticket->folio)) {
-            $ticket->folio = $this->generarFolioUnico();
+            $ticket->folio = $this->generarFolioParaModelo('TKT', Ticket::class);
         }
-    }
-
-    /**
-     * Genera un folio único en formato TKT-YYYYMMDD-XXXX.
-     */
-    protected function generarFolioUnico(): string
-    {
-        $fecha = now()->format('Ymd');
-
-        do {
-            $aleatorio = strtoupper(Str::random(4));
-            $folio = "TKT-{$fecha}-{$aleatorio}";
-        } while (Ticket::where('folio', $folio)->exists());
-
-        return $folio;
     }
 }

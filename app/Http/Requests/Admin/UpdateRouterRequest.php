@@ -22,6 +22,8 @@ class UpdateRouterRequest extends FormRequest
             'ip_address' => ['required', 'string', 'max:45'],
             'api_user' => ['required', 'string', 'max:50'],
             'api_password' => ['nullable', 'string'],
+            'usar_tls' => ['sometimes', 'boolean'],
+            'verificar_certificado' => ['sometimes', 'boolean'],
             'estado' => ['required', 'in:activo,inactivo'],
         ];
     }

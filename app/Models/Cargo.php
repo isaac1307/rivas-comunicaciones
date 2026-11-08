@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoCargo;
 use App\Traits\Auditable;
 use Database\Factories\CargoFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -108,15 +109,26 @@ class Cargo extends Model
     }
 
     /**
+     * Saldo pendiente del cargo expresado en centavos enteros (sin errores de punto flotante).
+     */
+    public function saldoEnCentavos(): int
+    {
+        if ($this->estado === EstadoCargo::Cancelado->value) {
+            return 0;
+        }
+
+        $montoCentavos = (int) round((float) $this->monto * 100);
+        $pagadoCentavos = (int) round((float) $this->monto_pagado * 100);
+
+        return max(0, $montoCentavos - $pagadoCentavos);
+    }
+
+    /**
      * Saldo pendiente por cubrir del cargo.
      */
     public function saldo(): float
     {
-        if ($this->estado === 'cancelado') {
-            return 0.0;
-        }
-
-        return round((float) $this->monto - (float) $this->monto_pagado, 2);
+        return round($this->saldoEnCentavos() / 100, 2);
     }
 
     /**
@@ -133,16 +145,17 @@ class Cargo extends Model
      */
     public function recalcularEstado(): void
     {
-        if ($this->estado === 'cancelado') {
+        if ($this->estado === EstadoCargo::Cancelado->value) {
             return;
         }
 
-        $pagado = (float) $this->monto_pagado;
+        $pagadoCentavos = (int) round((float) $this->monto_pagado * 100);
+        $montoCentavos = (int) round((float) $this->monto * 100);
 
         $this->estado = match (true) {
-            $pagado <= 0 => 'pendiente',
-            $pagado < (float) $this->monto => 'parcial',
-            default => 'pagado',
+            $pagadoCentavos <= 0 => EstadoCargo::Pendiente->value,
+            $pagadoCentavos < $montoCentavos => EstadoCargo::Parcial->value,
+            default => EstadoCargo::Pagado->value,
         };
     }
 

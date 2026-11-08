@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\EstadoTicket;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTicketRequest extends FormRequest
 {
@@ -21,7 +23,7 @@ class StoreTicketRequest extends FormRequest
             'cliente_id' => ['required', 'exists:clientes,id'],
             'categoria' => ['required', 'in:falla_servicio,soporte_tecnico,consulta,cambio_plan,cancelacion'],
             'descripcion' => ['required', 'string'],
-            'estado' => ['required', 'in:abierto,en_proceso,resuelto,cerrado'],
+            'estado' => ['required', Rule::enum(EstadoTicket::class)],
             'observaciones_admin' => ['nullable', 'string', 'max:1500'],
         ];
     }

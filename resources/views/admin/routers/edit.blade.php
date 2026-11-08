@@ -80,6 +80,17 @@
                 @enderror
             </div>
 
+            <div class="col-md-6 d-flex align-items-center">
+                <div class="form-check form-switch mt-3">
+                    <input type="hidden" name="usar_tls" value="0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="usar_tls" name="usar_tls" value="1" {{ old('usar_tls', $router->usar_tls) ? 'checked' : '' }}>
+                    <label class="form-check-label fw-bold small text-dark" for="usar_tls">
+                        <i class="bi bi-lock-fill text-success me-1"></i> Usar HTTPS / TLS (`www-ssl`) para la API REST
+                    </label>
+                    <div class="text-muted small">Actívalo si el router tiene certificado SSL configurado en IP -> Services -> www-ssl.</div>
+                </div>
+            </div>
+
             <div class="col-12 mt-4 d-flex justify-content-between align-items-center">
                 <a href="{{ route('admin.routers.index') }}" class="btn btn-secondary">Cancelar</a>
                 <div class="d-flex gap-2">

@@ -12,8 +12,8 @@ return [
     |
     */
 
-    'ip' => env('MIKROTIK_IP', '192.168.1.116'),
-    'user' => env('MIKROTIK_USER', 'admin'),
+    'ip' => env('MIKROTIK_IP', ''),
+    'user' => env('MIKROTIK_USER', ''),
     'pass' => env('MIKROTIK_PASS', ''),
     'timeout' => (int) env('MIKROTIK_TIMEOUT', 5),
 

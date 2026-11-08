@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\User;
+use App\Enums\RolUsuario;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,7 +29,7 @@ class StoreUsuarioRequest extends FormRequest
             'nombre_completo' => ['required', 'string', 'max:150'],
             'email' => ['nullable', 'email', 'max:150', Rule::unique('usuarios', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'rol' => ['required', Rule::in(array_keys(User::ROLES))],
+            'rol' => ['required', Rule::enum(RolUsuario::class)],
             'estado' => ['required', Rule::in(['activo', 'inactivo'])],
         ];
     }

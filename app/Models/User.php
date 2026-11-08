@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RolUsuario;
 use App\Traits\Auditable;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -148,7 +149,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function isAdmin(): bool
     {
-        return $this->rol === 'administrador';
+        return $this->rol === RolUsuario::Administrador->value;
     }
 
     /**
@@ -156,7 +157,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function isOperador(): bool
     {
-        return $this->rol === 'operador';
+        return $this->rol === RolUsuario::Operador->value;
     }
 
     /**
@@ -164,7 +165,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function isCobrador(): bool
     {
-        return $this->rol === 'cobrador';
+        return $this->rol === RolUsuario::Cobrador->value;
     }
 
     /**
@@ -190,7 +191,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function rolEtiqueta(): string
     {
-        return self::ROLES[$this->rol] ?? ucfirst($this->rol);
+        return RolUsuario::tryFrom($this->rol)?->label() ?? (self::ROLES[$this->rol] ?? ucfirst($this->rol));
     }
 
     /**

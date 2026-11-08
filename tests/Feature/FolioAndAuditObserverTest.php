@@ -18,7 +18,7 @@ class FolioAndAuditObserverTest extends TestCase
         $reservacion = Reservacion::factory()->create();
 
         $this->assertNotEmpty($reservacion->folio);
-        $this->assertMatchesRegularExpression('/^RES-\d{8}-[A-Z0-9]{4}$/', $reservacion->folio);
+        $this->assertMatchesRegularExpression('/^RES-\d{8}-[A-Z]{4}$/', $reservacion->folio);
     }
 
     public function test_ticket_observer_generates_unique_folio_format(): void
@@ -26,7 +26,7 @@ class FolioAndAuditObserverTest extends TestCase
         $ticket = Ticket::factory()->create();
 
         $this->assertNotEmpty($ticket->folio);
-        $this->assertMatchesRegularExpression('/^TKT-\d{8}-[A-Z0-9]{4}$/', $ticket->folio);
+        $this->assertMatchesRegularExpression('/^TKT-\d{8}-[A-Z]{4}$/', $ticket->folio);
     }
 
     public function test_auditable_trait_logs_changes_in_bitacora(): void
