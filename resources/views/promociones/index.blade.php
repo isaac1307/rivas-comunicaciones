@@ -1,173 +1,69 @@
 @extends('layouts.app')
 
 @section('title', 'Promociones Vigentes')
-@section('meta_description', 'Beneficios vigentes en instalación de fibra óptica y mensualidades para nuevos contratos en Cuernavaca y Morelos.')
 
 @section('content')
-<section class="rc-page-head">
-    <div class="rc-wrap rc-page-head__grid">
-        <div class="rc-page-head__title">
-            <h1 class="rc-lines">
-                <span class="rc-line"><span data-line style="--i:0">Promociones</span></span>
-                <span class="rc-line"><span data-line style="--i:1">vigentes</span></span>
-            </h1>
-        </div>
-        <div class="rc-page-head__desc">
-            <p class="rc-lead">
-                Condiciones preferentes de alta y bonificaciones de temporada aplicables al contratar en nuestras zonas activas de Morelos.
-            </p>
-        </div>
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <span class="badge bg-danger px-3 py-2 rounded-pill fw-bold text-uppercase">Ofertas Especiales</span>
+        <h1 class="display-5 fw-bold mt-2">Promociones y Descuentos Activos</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 650px;">
+            Aprovecha nuestros paquetes con beneficios exclusivos en instalación y mensualidades reducidas.
+        </p>
     </div>
-</section>
 
-<section class="rc-section rc-section--surface">
-    <div class="rc-wrap">
-        <div class="rc-proof__header">
-            <h2 class="rc-proof__title" data-reveal>Beneficios activos</h2>
-            <div class="rc-proof__aside" data-reveal style="--s:1">
-                <p class="rc-muted">
-                    Cada beneficio queda asentado en tu orden de reservación desde el momento en que agendas en línea.
-                </p>
-            </div>
-        </div>
+    <div class="row g-4 justify-content-center">
+        @forelse ($promociones as $promo)
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                    <div class="bg-primary text-white p-4 text-center">
+                        <span class="badge bg-white text-primary text-uppercase px-3 py-1 rounded-pill small fw-bold mb-2">
+                            <i class="bi bi-clock-history me-1"></i> Vigente
+                        </span>
+                        <h4 class="fw-bold mb-0 text-white">{{ $promo->titulo }}</h4>
+                    </div>
+                    
+                    <div class="card-body p-4 d-flex flex-column">
+                        <p class="text-muted small mb-4">{{ $promo->descripcion }}</p>
 
-        @if ($promociones->isNotEmpty())
-            <div class="rc-promo-list">
-                @foreach ($promociones as $index => $promo)
-                    <article class="rc-promo-row" data-reveal style="--s:{{ $index }}">
-                        <div class="rc-promo-row__head">
-                            <h3>{{ $promo->titulo }}</h3>
-                            <p class="rc-muted rc-tabular" style="margin-top: 0.5rem;">
-                                Vigente hasta el {{ $promo->fecha_vencimiento->format('d/m/Y') }}
-                            </p>
-                        </div>
-
-                        <div class="rc-promo-row__body">
-                            <p>{{ $promo->descripcion }}</p>
-
+                        <div class="mb-4">
+                            <span class="small fw-bold text-dark d-block mb-2">Planes participantes:</span>
                             @if ($promo->planes->isNotEmpty())
-                                <ul class="rc-tag-list rc-tabular">
+                                <div class="d-flex flex-wrap gap-1">
                                     @foreach ($promo->planes as $p)
-                                        <li>
-                                            <a class="rc-tag" href="{{ route('reservaciones.create', ['plan_id' => $p->id]) }}">
-                                                {{ $p->nombre }} · ${{ number_format((float) $p->precio_mensual, 0) }}/mes
-                                            </a>
-                                        </li>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-3 rounded-3">
+                                            <i class="bi bi-speedometer2 me-1"></i> {{ $p->nombre }} (${{ number_format($p->precio_mensual, 2) }}/mes)
+                                        </span>
                                     @endforeach
-                                </ul>
+                                </div>
                             @else
-                                <p class="rc-muted">Aplicable en todo el catálogo residencial y comercial activo.</p>
+                                <span class="badge bg-secondary-subtle text-muted">Aplica en todos los planes</span>
                             @endif
-
-                            <div>
-                                <a href="{{ route('reservaciones.create') }}" class="rc-btn rc-btn--gold">
-                                    Contratar con esta promoción
-                                </a>
-                            </div>
                         </div>
-                    </article>
-                @endforeach
-            </div>
-        @else
-            <div class="rc-split">
-                <div class="rc-split__media">
-                    <h3>Temporada regular</h3>
-                </div>
-                <div class="rc-split__content">
-                    <p class="rc-muted">
-                        En este momento operamos con nuestro tabulador estándar sin cargos forzosos. Consulta los planes vigentes o agenda tu instalación directa.
-                    </p>
-                    <p style="margin-top: 1.5rem;">
-                        <a href="{{ route('planes.index') }}" class="rc-btn rc-btn--gold">Revisar planes vigentes</a>
-                    </p>
+
+                        <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center small text-muted">
+                            <span>Vigencia:</span>
+                            <span class="fw-bold text-danger">
+                                <i class="bi bi-calendar-check me-1"></i> {{ $promo->fecha_vencimiento->format('d/m/Y') }}
+                            </span>
+                        </div>
+
+                        <a href="{{ route('reservaciones.create') }}" class="btn btn-primary w-100 mt-3 fw-bold">
+                            Contratar con esta Promoción
+                        </a>
+                    </div>
                 </div>
             </div>
-        @endif
+        @empty
+            <div class="col-12 text-center py-5">
+                <div class="p-5 bg-white rounded-4 shadow-sm">
+                    <i class="bi bi-tags text-muted display-1"></i>
+                    <h4 class="mt-3 text-muted">No hay promociones activas por el momento</h4>
+                    <p class="text-muted small">Vuelve pronto para consultar nuestras nuevas ofertas de temporada.</p>
+                    <a href="{{ route('planes.index') }}" class="btn btn-outline-primary mt-2">Ver Planes Estándar</a>
+                </div>
+            </div>
+        @endforelse
     </div>
-</section>
-
-<section class="rc-section rc-section--bg">
-    <div class="rc-wrap">
-        <div class="rc-territory-pair">
-            <figure class="rc-territory-pair__map" data-reveal style="--s:0">
-                <div class="rc-media-frame">
-                    <img
-                        class="rc-drift"
-                        src="{{ asset('assets/editorial/cuernavaca-1968.webp') }}"
-                        width="1156"
-                        height="1812"
-                        loading="lazy"
-                        decoding="async"
-                        alt="Plano cartográfico histórico de las avenidas y barrancas de Cuernavaca trazado por el servicio geológico en 1968"
-                    >
-                </div>
-                <figcaption class="rc-caption">Cobertura urbana continua en Cuernavaca y área conurbada.</figcaption>
-            </figure>
-
-            <figure class="rc-territory-pair__valley" data-reveal style="--s:1">
-                <div class="rc-media-frame">
-                    <img
-                        class="rc-drift"
-                        src="{{ asset('assets/editorial/zona-metropolitana-de-cuernavaca-vista-civac-2019.jpg') }}"
-                        width="1341"
-                        height="893"
-                        loading="lazy"
-                        decoding="async"
-                        alt="Vista aérea al anochecer del valle metropolitano de Cuernavaca y Jiutepec iluminado bajo la sierra de Morelos"
-                    >
-                </div>
-                <figcaption class="rc-caption">Atención directa en el valle metropolitano y corredor CIVAC.</figcaption>
-            </figure>
-        </div>
-
-        <div class="rc-territory-pair" style="margin-bottom: 0;">
-            <figure class="rc-territory-pair__map" data-reveal style="--s:0">
-                <div class="rc-media-frame">
-                    <img
-                        src="{{ asset('assets/editorial/fiber-optic-illuminated.jpg') }}"
-                        width="1920"
-                        height="1203"
-                        loading="lazy"
-                        decoding="async"
-                        alt="Conductor de fibra óptica enrollado sobre fondo oscuro transmitiendo luz láser"
-                    >
-                </div>
-                <figcaption class="rc-caption">Equipo ONT doble banda incluido sin costo de renta adicional.</figcaption>
-            </figure>
-
-            <figure class="rc-territory-pair__valley" data-reveal style="--s:1">
-                <div class="rc-media-frame">
-                    <img
-                        src="{{ asset('assets/editorial/vista-en-la-cima-de-las-montanas.jpg') }}"
-                        width="1920"
-                        height="2560"
-                        loading="lazy"
-                        decoding="async"
-                        alt="Laderas y formaciones rocosas de la sierra de Loma Bonita en Tepoztlán, Morelos"
-                    >
-                </div>
-                <figcaption class="rc-caption">Promociones válidas tanto en red óptica como en enlace rural.</figcaption>
-            </figure>
-        </div>
-    </div>
-</section>
-
-<section aria-label="Contratación directa">
-    <a href="{{ route('reservaciones.create') }}" class="rc-cta-band">
-        <div class="rc-cta-band__top">
-            <h2 class="rc-cta-band__heading">Agenda hoy</h2>
-            <p class="rc-cta-band__lead">
-                Al terminar el periodo promocional pasas a la tarifa mensual estándar sin incrementos ocultos.
-            </p>
-            <span class="rc-cta-band__arrow-wrap" aria-hidden="true">
-                <svg class="rc-cta-band__arrow" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.5">
-                    <path d="M10 38L38 10M38 10H14M38 10V34" />
-                </svg>
-            </span>
-        </div>
-        <div class="rc-cta-band__word-wrap">
-            <span class="rc-cta-band__word">Contratar</span>
-        </div>
-    </a>
-</section>
+</div>
 @endsection
